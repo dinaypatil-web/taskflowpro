@@ -1,15 +1,19 @@
 'use client'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from 'react-query'
 import { useAuthStore } from '@/store/authStore'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AuthProtectedPage } from '@/components/ClientOnly'
 import { 
   Bell, 
   Search, 
-  Filter, 
   Mail, 
   MessageSquare, 
   Phone,
@@ -49,6 +53,14 @@ interface Reminder {
 }
 
 export default function RemindersPage() {
+  return (
+    <AuthProtectedPage>
+      <RemindersPageContent />
+    </AuthProtectedPage>
+  )
+}
+
+function RemindersPageContent() {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
   const [searchTerm, setSearchTerm] = useState('')
@@ -150,7 +162,7 @@ export default function RemindersPage() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Pending</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {remindersList.filter(r => r.status === 'PENDING').length}
+                  {remindersList.filter((r: Reminder) => r.status === 'PENDING').length}
                 </p>
               </div>
             </div>
@@ -164,7 +176,7 @@ export default function RemindersPage() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Sent</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {remindersList.filter(r => r.status === 'SENT').length}
+                  {remindersList.filter((r: Reminder) => r.status === 'SENT').length}
                 </p>
               </div>
             </div>
@@ -178,7 +190,7 @@ export default function RemindersPage() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Delivered</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {remindersList.filter(r => r.status === 'DELIVERED').length}
+                  {remindersList.filter((r: Reminder) => r.status === 'DELIVERED').length}
                 </p>
               </div>
             </div>
@@ -192,7 +204,7 @@ export default function RemindersPage() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Failed</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {remindersList.filter(r => r.status === 'FAILED').length}
+                  {remindersList.filter((r: Reminder) => r.status === 'FAILED').length}
                 </p>
               </div>
             </div>

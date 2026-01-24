@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosResponse } from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1'
 
 // Create axios instance
 export const apiClient = axios.create({
@@ -59,7 +59,7 @@ apiClient.interceptors.response.use(
     // Handle other errors
     if (error.response?.status === 403) {
       toast.error('Access denied')
-    } else if (error.response?.status >= 500) {
+    } else if (error.response && error.response.status >= 500) {
       toast.error('Server error. Please try again later.')
     } else if (!error.response) {
       toast.error('Network error. Please check your connection.')

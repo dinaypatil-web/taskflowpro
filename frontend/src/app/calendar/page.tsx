@@ -1,5 +1,9 @@
 'use client'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from 'react-query'
@@ -7,6 +11,7 @@ import { useAuthStore } from '@/store/authStore'
 import { tasksApi } from '@/lib/api/tasks'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AuthProtectedPage } from '@/components/ClientOnly'
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -19,6 +24,14 @@ import Link from 'next/link'
 import { formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
 
 export default function CalendarPage() {
+  return (
+    <AuthProtectedPage>
+      <CalendarPageContent />
+    </AuthProtectedPage>
+  )
+}
+
+function CalendarPageContent() {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -27,7 +40,8 @@ export default function CalendarPage() {
   const { data: tasks, isLoading } = useQuery(
     ['calendar-tasks', currentDate.getMonth(), currentDate.getFullYear()],
     () => tasksApi.getTasks({
-      dueDate: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+      dueDateFrom: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`,
+      dueDateTo: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-31`,
       limit: 100,
       sortBy: 'dueDate',
       sortOrder: 'asc'

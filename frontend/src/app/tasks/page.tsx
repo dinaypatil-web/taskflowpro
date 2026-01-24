@@ -1,5 +1,9 @@
 'use client'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from 'react-query'
@@ -7,6 +11,8 @@ import { useAuthStore } from '@/store/authStore'
 import { tasksApi } from '@/lib/api/tasks'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { TaskStatus, Priority } from '@/types/task'
+import { AuthProtectedPage } from '@/components/ClientOnly'
 import { 
   Plus, 
   Search, 
@@ -21,18 +27,26 @@ import Link from 'next/link'
 import { formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
 
 export default function TasksPage() {
+  return (
+    <AuthProtectedPage>
+      <TasksPageContent />
+    </AuthProtectedPage>
+  )
+}
+
+function TasksPageContent() {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [priorityFilter, setPriorityFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('')
+  const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('')
 
   const { data, isLoading } = useQuery(
     ['tasks', searchTerm, statusFilter, priorityFilter],
     () => tasksApi.getTasks({
       search: searchTerm || undefined,
-      status: statusFilter || undefined,
-      priority: priorityFilter || undefined,
+      status: (statusFilter as TaskStatus) || undefined,
+      priority: (priorityFilter as Priority) || undefined,
       limit: 50,
       sortBy: 'createdAt',
       sortOrder: 'desc'
@@ -83,7 +97,7 @@ export default function TasksPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => setStatusFilter(e.target.value as TaskStatus | '')}
                 className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="">All Status</option>
@@ -94,7 +108,7 @@ export default function TasksPage() {
               </select>
               <select
                 value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
+                onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
                 className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="">All Priority</option>
@@ -194,7 +208,7 @@ export default function TasksPage() {
         </div>
 
         {/* Pagination */}
-        {data && data.totalPages > 1 && (
+        {data && data.pagination.pages > 1 && (
           <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow-sm">
             <div className="flex-1 flex justify-between sm:hidden">
               <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
@@ -207,11 +221,11 @@ export default function TasksPage() {
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{((data.page - 1) * data.limit) + 1}</span> to{' '}
+                  Showing <span className="font-medium">{((data.pagination.page - 1) * data.pagination.limit) + 1}</span> to{' '}
                   <span className="font-medium">
-                    {Math.min(data.page * data.limit, data.total)}
+                    {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)}
                   </span>{' '}
-                  of <span className="font-medium">{data.total}</span> results
+                  of <span className="font-medium">{data.pagination.total}</span> results
                 </p>
               </div>
             </div>

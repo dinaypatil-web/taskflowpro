@@ -146,6 +146,7 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         accessToken: state.accessToken,
       }),
+      skipHydration: true, // Skip hydration during SSR
     }
   )
 )

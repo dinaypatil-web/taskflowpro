@@ -1,5 +1,9 @@
 'use client'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from 'react-query'
@@ -8,6 +12,7 @@ import { stakeholdersApi } from '@/lib/api/stakeholders'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { SaveToContacts } from '@/components/contacts/SaveToContacts'
+import { AuthProtectedPage } from '@/components/ClientOnly'
 import { 
   Plus, 
   Search, 
@@ -25,6 +30,14 @@ import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 
 export default function StakeholdersPage() {
+  return (
+    <AuthProtectedPage>
+      <StakeholdersPageContent />
+    </AuthProtectedPage>
+  )
+}
+
+function StakeholdersPageContent() {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
   const [searchTerm, setSearchTerm] = useState('')
@@ -43,7 +56,7 @@ export default function StakeholdersPage() {
   )
 
   const stakeholders = data?.stakeholders || []
-  const organizations = [...new Set(stakeholders.map(s => s.organization).filter(Boolean))]
+  const organizations = Array.from(new Set(stakeholders.map(s => s.organization).filter(Boolean)))
 
   if (!isAuthenticated) {
     router.push('/auth/login')

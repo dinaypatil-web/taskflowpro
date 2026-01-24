@@ -7,6 +7,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { initializeAuth } = useAuthStore()
 
   useEffect(() => {
+    // Hydrate the store from localStorage
+    useAuthStore.persist.rehydrate()
     initializeAuth()
   }, [initializeAuth])
 

@@ -1,5 +1,9 @@
 'use client'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -9,6 +13,7 @@ import { useMutation, useQueryClient } from 'react-query'
 import { useAuthStore } from '@/store/authStore'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AuthProtectedPage } from '@/components/ClientOnly'
 import { 
   User, 
   Mail, 
@@ -52,6 +57,14 @@ type ProfileFormData = z.infer<typeof profileSchema>
 type PasswordFormData = z.infer<typeof passwordSchema>
 
 export default function SettingsPage() {
+  return (
+    <AuthProtectedPage>
+      <SettingsPageContent />
+    </AuthProtectedPage>
+  )
+}
+
+function SettingsPageContent() {
   const router = useRouter()
   const { user, isAuthenticated, setUser } = useAuthStore()
   const { theme, setTheme } = useTheme()
