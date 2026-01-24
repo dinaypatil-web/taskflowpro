@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow Pro - Task Management SaaS</title>
+    <meta name="description" content="TaskFlow Pro - Complete task management solution with stakeholder management, calendar integration, and multi-channel notifications">
+    <meta name="keywords" content="task management, productivity, SaaS, project management, stakeholder management">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .feature h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .feature p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .cta {
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            margin: 0 0.5rem;
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📋 TaskFlow Pro</div>
+        <div class="tagline">Complete Task Management SaaS Solution</div>
+        
+        <div class="features">
+            <div class="feature">
+                <h3>🔐 Authentication</h3>
+                <p>Secure login, registration, and JWT-based authentication</p>
+            </div>
+            <div class="feature">
+                <h3>📋 Task Management</h3>
+                <p>Complete CRUD operations with priorities and status tracking</p>
+            </div>
+            <div class="feature">
+                <h3>👥 Stakeholder Management</h3>
+                <p>Contact management with mobile integration</p>
+            </div>
+            <div class="feature">
+                <h3>📅 Calendar Integration</h3>
+                <p>Task scheduling and calendar view</p>
+            </div>
+            <div class="feature">
+                <h3>🔔 Multi-Channel Notifications</h3>
+                <p>Email, SMS, and WhatsApp notifications</p>
+            </div>
+            <div class="feature">
+                <h3>🎤 Voice Integration</h3>
+                <p>Speech-to-text task creation</p>
+            </div>
+            <div class="feature">
+                <h3>📱 Mobile Responsive</h3>
+                <p>Optimized for mobile, tablet, and desktop</p>
+            </div>
+            <div class="feature">
+                <h3>🎨 Modern UI</h3>
+                <p>Dark/Light themes with glassmorphism effects</p>
+            </div>
+        </div>
+        
+        <div class="status">
+            <h3>✅ Deployment Status</h3>
+            <p>TaskFlow Pro is successfully deployed and ready for use!</p>
+        </div>
+        
+        <div class="cta">
+            <a href="/auth/login" class="btn">🚀 Launch Application</a>
+            <a href="/auth/register" class="btn">📝 Sign Up</a>
+        </div>
+        
+        <div style="margin-top: 2rem; font-size: 0.9rem; opacity: 0.7;">
+            <p>Built with Next.js, NestJS, TypeScript, and modern web technologies</p>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-redirect to the main application after 3 seconds
+        setTimeout(() => {
+            if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+                window.location.href = '/dashboard';
+            }
+        }, 3000);
+        
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const features = document.querySelectorAll('.feature');
+            features.forEach((feature, index) => {
+                feature.style.animationDelay = `${index * 0.1}s`;
+                feature.style.animation = 'fadeInUp 0.6s ease forwards';
+            });
+        });
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .feature {
+                opacity: 0;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

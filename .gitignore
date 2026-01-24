@@ -82,7 +82,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public - Removed to allow public directory for Vercel deployment
 
 # Vuepress build output
 .vuepress/dist

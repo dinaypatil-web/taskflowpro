@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# TaskFlow Pro - Task Management SaaS
+# Sitemap location
+Sitemap: https://your-domain.com/sitemap.xml
+
+# Allow crawling of main pages
+Allow: /auth/login
+Allow: /auth/register
+Allow: /
+
+# Disallow private/admin areas
+Disallow: /dashboard
+Disallow: /tasks
+Disallow: /stakeholders
+Disallow: /calendar
+Disallow: /reminders
+Disallow: /settings
+Disallow: /api/
