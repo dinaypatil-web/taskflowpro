@@ -11,16 +11,23 @@ import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  // Winston logger configuration
-  const logger = WinstonModule.createLogger({
-    transports: [
-      new winston.transports.Console({
-        format: winston.format.combine(
-          winston.format.timestamp(),
-          winston.format.colorize(),
-          winston.format.simple(),
-        ),
-      }),
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Winston logger configuration — console-only in production to avoid
+  // file-system write failures on containerized platforms like Railway.
+  const transports: winston.transport[] = [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.colorize(),
+        winston.format.simple(),
+      ),
+    }),
+  ];
+
+  // Only add file transports in development where the filesystem is writable
+  if (!isProduction) {
+    transports.push(
       new winston.transports.File({
         filename: 'logs/error.log',
         level: 'error',
@@ -36,8 +43,10 @@ async function bootstrap() {
           winston.format.json(),
         ),
       }),
-    ],
-  });
+    );
+  }
+
+  const logger = WinstonModule.createLogger({ transports });
 
   const app = await NestFactory.create(AppModule, {
     logger,
@@ -50,9 +59,10 @@ async function bootstrap() {
   app.use(compression());
   app.use(cookieParser());
 
-  // CORS configuration
+  // CORS configuration — allow multiple origins for flexibility
+  const frontendUrl = configService.get('FRONTEND_URL', 'http://localhost:3000');
   app.enableCors({
-    origin: configService.get('FRONTEND_URL', 'http://localhost:3000'),
+    origin: [frontendUrl, 'http://localhost:3000'],
     credentials: true,
   });
 
@@ -72,7 +82,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // Swagger documentation
-  if (configService.get('NODE_ENV') !== 'production') {
+  if (!isProduction) {
     const config = new DocumentBuilder()
       .setTitle('TaskFlow Pro API')
       .setDescription('Professional task scheduler and reminder platform API')
@@ -85,10 +95,25 @@ async function bootstrap() {
   }
 
   const port = configService.get('PORT', 3001);
-  await app.listen(port);
 
-  logger.log(`🚀 TaskFlow Pro API is running on: http://localhost:${port}`);
-  logger.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+  // Explicitly listen on 0.0.0.0 for deployment platforms (like Railway)
+  await app.listen(port, '0.0.0.0');
+
+  logger.log(`🚀 TaskFlow Pro API is running on port ${port}`);
+  logger.log(`📄 Environment: ${isProduction ? 'production' : 'development'}`);
 }
 
-bootstrap();
+// Global error handling outside bootstrap to catch initialization errors
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception thrown:', err);
+  process.exit(1);
+});
+
+bootstrap().catch((err) => {
+  console.error('Fatal error during bootstrap:', err);
+  process.exit(1);
+});
