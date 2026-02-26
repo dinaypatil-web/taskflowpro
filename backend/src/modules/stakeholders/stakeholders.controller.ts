@@ -16,19 +16,27 @@ import { StakeholdersService } from './stakeholders.service';
 import { CreateStakeholderDto } from './dto/create-stakeholder.dto';
 import { UpdateStakeholderDto } from './dto/update-stakeholder.dto';
 import { StakeholderQueryDto } from './dto/stakeholder-query.dto';
+import { BulkCreateStakeholderDto } from './dto/bulk-create-stakeholder.dto';
 
 @ApiTags('Stakeholders')
 @Controller('stakeholders')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class StakeholdersController {
-  constructor(private readonly stakeholdersService: StakeholdersService) {}
+  constructor(private readonly stakeholdersService: StakeholdersService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new stakeholder' })
   @ApiResponse({ status: 201, description: 'Stakeholder created successfully' })
   create(@Request() req, @Body() createStakeholderDto: CreateStakeholderDto) {
     return this.stakeholdersService.create(req.user.id, createStakeholderDto);
+  }
+
+  @Post('bulk')
+  @ApiOperation({ summary: 'Create multiple stakeholders' })
+  @ApiResponse({ status: 201, description: 'Stakeholders created successfully' })
+  createBulk(@Request() req, @Body() bulkDto: BulkCreateStakeholderDto) {
+    return this.stakeholdersService.createMany(req.user.id, bulkDto.stakeholders);
   }
 
   @Get()

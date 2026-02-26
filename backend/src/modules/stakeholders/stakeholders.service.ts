@@ -35,6 +35,32 @@ export class StakeholdersService {
     return { id: stakeholderRef.id, ...stakeholder };
   }
 
+  async createMany(userId: string, stakeholders: CreateStakeholderDto[]) {
+    const batch = this.firestore.getDb().batch();
+    const now = new Date();
+    const results = [];
+
+    stakeholders.forEach((dto) => {
+      const { tags, ...stakeholderData } = dto;
+      const docRef = this.stakeholdersCollection.doc();
+      const stakeholder = {
+        ...stakeholderData,
+        userId,
+        tags: tags || [],
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      };
+
+      batch.set(docRef, stakeholder);
+      results.push({ id: docRef.id, ...stakeholder });
+    });
+
+    await batch.commit();
+    return results;
+  }
+
   async findAll(userId: string, query: StakeholderQueryDto) {
     const {
       page = 1,

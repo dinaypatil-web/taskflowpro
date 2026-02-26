@@ -67,4 +67,9 @@ export const stakeholdersApi = {
     const response = await apiClient.get(`/stakeholders/${id}/tasks`)
     return response.data
   },
+
+  createBulkStakeholders: async (stakeholders: CreateStakeholderRequest[]): Promise<Stakeholder[]> => {
+    const response = await apiClient.post('/stakeholders/bulk', { stakeholders })
+    return response.data
+  },
 }

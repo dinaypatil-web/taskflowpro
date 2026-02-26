@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-02-26T18:46:15.059Z",
+  "totalDocuments": 1,
+  "samples": [
+    {
+      "id": "ymSj32zxvlFOsqtaSdU3",
+      "userId": "cLhsidbqXoSIjZeKHD87",
+      "deletedAt": null,
+      "firstName": "Dinay",
+      "lastName": "Patil",
+      "allKeys": [
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "organization",
+        "userId",
+        "tags",
+        "isActive",
+        "createdAt",
+        "updatedAt",
+        "deletedAt"
+      ]
+    }
+  ],
+  "missingUserIdCount": 0,
+  "deletedDocsCount": 0,
+  "errors": []
+}

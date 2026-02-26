@@ -13,6 +13,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { SaveToContacts } from '@/components/contacts/SaveToContacts'
 import { AuthProtectedPage } from '@/components/ClientOnly'
+import { ImportDeviceContacts } from './components/ImportDeviceContacts'
 import {
   Plus,
   Search,
@@ -72,13 +73,16 @@ function StakeholdersPageContent() {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Stakeholders</h1>
             <p className="text-sm sm:text-base text-gray-600">Manage your contacts and stakeholders</p>
           </div>
-          <Link
-            href="/stakeholders/new"
-            className="inline-flex items-center justify-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm sm:text-base"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Stakeholder
-          </Link>
+          <div className="flex items-center gap-3">
+            <ImportDeviceContacts onImportSuccess={refetch} />
+            <Link
+              href="/stakeholders/new"
+              className="inline-flex items-center justify-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm sm:text-base"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Stakeholder
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}

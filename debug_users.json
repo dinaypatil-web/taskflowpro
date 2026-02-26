@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-02-26T18:47:08.204Z",
+  "totalUsers": 3,
+  "users": [
+    {
+      "id": "cLhsidbqXoSIjZeKHD87",
+      "email": "dinay.patil@gmail.com",
+      "firstName": "Dinay"
+    },
+    {
+      "id": "uE6GJTHjiOkShBypjT31",
+      "email": "testuser99@example.com",
+      "firstName": "Test"
+    },
+    {
+      "id": "zV1rTO0G8rM1vKPSseyO",
+      "email": "testuser2@example.com",
+      "firstName": "Test"
+    }
+  ]
+}
