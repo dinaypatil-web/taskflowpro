@@ -56,7 +56,7 @@ export class AuthService {
     const now = new Date();
     const newUser = {
       email,
-      phone,
+      phone: phone || null,
       firstName,
       lastName,
       password: hashedPassword,
@@ -73,7 +73,7 @@ export class AuthService {
     const user = {
       id: userRef.id,
       email,
-      phone,
+      phone: phone || null,
       firstName,
       lastName,
       isEmailVerified: false,
