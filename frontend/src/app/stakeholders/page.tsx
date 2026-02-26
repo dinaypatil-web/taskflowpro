@@ -13,15 +13,15 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { SaveToContacts } from '@/components/contacts/SaveToContacts'
 import { AuthProtectedPage } from '@/components/ClientOnly'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Mail, 
-  Phone, 
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Mail,
+  Phone,
   Building,
   Users,
   Download
@@ -49,7 +49,7 @@ function StakeholdersPageContent() {
       search: searchTerm || undefined,
       organization: selectedOrganization || undefined,
       limit: 50,
-      sortBy: 'name',
+      sortBy: 'firstName',
       sortOrder: 'asc'
     }),
     { enabled: isAuthenticated }
@@ -227,7 +227,7 @@ function StakeholdersPageContent() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
-                            <SaveToContacts 
+                            <SaveToContacts
                               stakeholder={{
                                 firstName: stakeholder.firstName,
                                 lastName: stakeholder.lastName,
@@ -318,7 +318,7 @@ function StakeholdersPageContent() {
                             Created {formatDate(stakeholder.createdAt)}
                           </div>
                           <div className="mt-3">
-                            <SaveToContacts 
+                            <SaveToContacts
                               stakeholder={{
                                 firstName: stakeholder.firstName,
                                 lastName: stakeholder.lastName,
