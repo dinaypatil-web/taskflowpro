@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../shared/prisma/prisma.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { FirestoreService } from '../../shared/firestore/firestore.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
@@ -7,60 +7,82 @@ import { VoiceTaskDto } from './dto/voice-task.dto';
 
 @Injectable()
 export class TasksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private firestore: FirestoreService) { }
+
+  private get tasksCollection() {
+    return this.firestore.collection('tasks');
+  }
+
+  private get taskStakeholdersCollection() {
+    return this.firestore.collection('task_stakeholders');
+  }
 
   async create(userId: string, createTaskDto: CreateTaskDto) {
     const { stakeholderIds, ...taskData } = createTaskDto;
+    const now = new Date();
 
-    const task = await this.prisma.task.create({
-      data: {
-        ...taskData,
-        userId,
-        taskStakeholders: stakeholderIds?.length ? {
-          create: stakeholderIds.map(stakeholderId => ({
-            stakeholderId,
-            role: 'assignee',
-          })),
-        } : undefined,
-      },
-      include: {
-        taskStakeholders: {
-          include: {
-            stakeholder: true,
-          },
-        },
-      },
-    });
+    const taskRef = this.tasksCollection.doc();
+    const task = {
+      ...taskData,
+      userId,
+      isVoiceCreated: false,
+      voiceMetadata: null,
+      isDeleted: false,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    return task;
+    await taskRef.set(task);
+
+    if (stakeholderIds?.length) {
+      const batch = this.firestore.getDb().batch();
+      for (const stakeholderId of stakeholderIds) {
+        const mappingRef = this.taskStakeholdersCollection.doc();
+        batch.set(mappingRef, {
+          taskId: taskRef.id,
+          stakeholderId,
+          role: 'assignee',
+          createdAt: now,
+        });
+      }
+      await batch.commit();
+    }
+
+    return this.findOne(userId, taskRef.id);
   }
 
   async createFromVoice(userId: string, voiceTaskDto: VoiceTaskDto) {
     const { stakeholderIds, voiceMetadata, ...taskData } = voiceTaskDto;
+    const now = new Date();
 
-    const task = await this.prisma.task.create({
-      data: {
-        ...taskData,
-        userId,
-        isVoiceCreated: true,
-        voiceMetadata: voiceMetadata ? JSON.stringify(voiceMetadata) : null,
-        taskStakeholders: stakeholderIds?.length ? {
-          create: stakeholderIds.map(stakeholderId => ({
-            stakeholderId,
-            role: 'assignee',
-          })),
-        } : undefined,
-      },
-      include: {
-        taskStakeholders: {
-          include: {
-            stakeholder: true,
-          },
-        },
-      },
-    });
+    const taskRef = this.tasksCollection.doc();
+    const task = {
+      ...taskData,
+      userId,
+      isVoiceCreated: true,
+      voiceMetadata: voiceMetadata ? JSON.stringify(voiceMetadata) : null,
+      isDeleted: false,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    return task;
+    await taskRef.set(task);
+
+    if (stakeholderIds?.length) {
+      const batch = this.firestore.getDb().batch();
+      for (const stakeholderId of stakeholderIds) {
+        const mappingRef = this.taskStakeholdersCollection.doc();
+        batch.set(mappingRef, {
+          taskId: taskRef.id,
+          stakeholderId,
+          role: 'assignee',
+          createdAt: now,
+        });
+      }
+      await batch.commit();
+    }
+
+    return this.findOne(userId, taskRef.id);
   }
 
   async findAll(userId: string, query: TaskQueryDto) {
@@ -76,59 +98,50 @@ export class TasksService {
       dueDateTo,
     } = query;
 
-    const skip = (page - 1) * limit;
-
-    const where: any = {
-      userId,
-      isDeleted: false,
-    };
+    let firestoreQuery: any = this.tasksCollection
+      .where('userId', '==', userId)
+      .where('isDeleted', '==', false);
 
     if (status) {
-      where.status = status;
+      firestoreQuery = firestoreQuery.where('status', '==', status);
     }
 
     if (priority) {
-      where.priority = priority;
+      firestoreQuery = firestoreQuery.where('priority', '==', priority);
     }
 
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+    // Handle date range
+    if (dueDateFrom) {
+      firestoreQuery = firestoreQuery.where('dueDate', '>=', new Date(dueDateFrom));
+    }
+    if (dueDateTo) {
+      firestoreQuery = firestoreQuery.where('dueDate', '<=', new Date(dueDateTo));
     }
 
-    if (dueDateFrom || dueDateTo) {
-      where.dueDate = {};
-      if (dueDateFrom) {
-        where.dueDate.gte = new Date(dueDateFrom);
-      }
-      if (dueDateTo) {
-        where.dueDate.lte = new Date(dueDateTo);
-      }
-    }
+    // Sorting and Pagination
+    firestoreQuery = firestoreQuery.orderBy(sortBy, sortOrder);
 
-    const [tasks, total] = await Promise.all([
-      this.prisma.task.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
-        include: {
-          taskStakeholders: {
-            include: {
-              stakeholder: true,
-            },
-          },
-          reminders: {
-            where: { status: 'PENDING' },
-            orderBy: { scheduledAt: 'asc' },
-            take: 3,
-          },
-        },
-      }),
-      this.prisma.task.count({ where }),
-    ]);
+    // Note: Search is limited in Firestore. For simple search, we'll perform it on the results if provided
+    // or skip it for this basic migration. For production, Algolia or similar is recommended.
+
+    const countSnapshot = await firestoreQuery.count().get();
+    const total = countSnapshot.data().count;
+
+    const offset = (page - 1) * limit;
+    const snapshot = await firestoreQuery.offset(offset).limit(limit).get();
+
+    const tasks = await Promise.all(snapshot.docs.map(async (doc) => {
+      const taskData = doc.data();
+      const stakeholders = await this.getTaskStakeholders(doc.id);
+      return {
+        id: doc.id,
+        ...taskData,
+        taskStakeholders: stakeholders,
+        dueDate: taskData.dueDate?.toDate(),
+        createdAt: taskData.createdAt?.toDate(),
+        updatedAt: taskData.updatedAt?.toDate(),
+      };
+    }));
 
     return {
       tasks,
@@ -142,148 +155,132 @@ export class TasksService {
   }
 
   async findOne(userId: string, id: string) {
-    const task = await this.prisma.task.findFirst({
-      where: {
-        id,
-        userId,
-        isDeleted: false,
-      },
-      include: {
-        taskStakeholders: {
-          include: {
-            stakeholder: true,
-          },
-        },
-        reminders: {
-          orderBy: { scheduledAt: 'asc' },
-        },
-        calendarEvents: true,
-      },
-    });
+    const taskDoc = await this.tasksCollection.doc(id).get();
 
-    if (!task) {
+    if (!taskDoc.exists || taskDoc.data().userId !== userId || taskDoc.data().isDeleted) {
       throw new NotFoundException('Task not found');
     }
 
-    return task;
+    const taskData = taskDoc.data();
+    const stakeholders = await this.getTaskStakeholders(id);
+
+    // Get reminders and calendar events associated (simplified for now)
+    const [remindersSnapshot, calendarEventsSnapshot] = await Promise.all([
+      this.firestore.collection('reminders').where('taskId', '==', id).orderBy('scheduledAt', 'asc').get(),
+      this.firestore.collection('calendar_events').where('taskId', '==', id).get(),
+    ]);
+
+    return {
+      id: taskDoc.id,
+      ...taskData,
+      taskStakeholders: stakeholders,
+      reminders: remindersSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
+      calendarEvents: calendarEventsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
+      dueDate: taskData.dueDate?.toDate(),
+      createdAt: taskData.createdAt?.toDate(),
+      updatedAt: taskData.updatedAt?.toDate(),
+    };
   }
 
   async update(userId: string, id: string, updateTaskDto: UpdateTaskDto) {
     const { stakeholderIds, ...taskData } = updateTaskDto;
 
-    // Check if task exists and belongs to user
-    const existingTask = await this.prisma.task.findFirst({
-      where: { id, userId, isDeleted: false },
-    });
+    const taskRef = this.tasksCollection.doc(id);
+    const taskDoc = await taskRef.get();
 
-    if (!existingTask) {
+    if (!taskDoc.exists || taskDoc.data().userId !== userId || taskDoc.data().isDeleted) {
       throw new NotFoundException('Task not found');
     }
 
-    // Update task with stakeholders
-    const task = await this.prisma.$transaction(async (tx) => {
-      // Update task data
-      const updatedTask = await tx.task.update({
-        where: { id },
-        data: {
-          ...taskData,
-          completedAt: taskData.status === 'COMPLETED' ? new Date() : null,
-        },
-      });
+    const updatePayload: any = {
+      ...taskData,
+      updatedAt: new Date(),
+    };
 
-      // Update stakeholders if provided
-      if (stakeholderIds !== undefined) {
-        // Remove existing stakeholders
-        await tx.taskStakeholder.deleteMany({
-          where: { taskId: id },
+    if (taskData.status === 'COMPLETED') {
+      updatePayload.completedAt = new Date();
+    }
+
+    await taskRef.update(updatePayload);
+
+    if (stakeholderIds !== undefined) {
+      const existingMappings = await this.taskStakeholdersCollection.where('taskId', '==', id).get();
+      const batch = this.firestore.getDb().batch();
+
+      existingMappings.docs.forEach(doc => batch.delete(doc.ref));
+
+      for (const sId of stakeholderIds) {
+        const mappingRef = this.taskStakeholdersCollection.doc();
+        batch.set(mappingRef, {
+          taskId: id,
+          stakeholderId: sId,
+          role: 'assignee',
+          createdAt: new Date(),
         });
-
-        // Add new stakeholders
-        if (stakeholderIds.length > 0) {
-          await tx.taskStakeholder.createMany({
-            data: stakeholderIds.map(stakeholderId => ({
-              taskId: id,
-              stakeholderId,
-              role: 'assignee',
-            })),
-          });
-        }
       }
 
-      return updatedTask;
-    });
+      await batch.commit();
+    }
 
     return this.findOne(userId, id);
   }
 
   async remove(userId: string, id: string) {
-    const task = await this.prisma.task.findFirst({
-      where: { id, userId, isDeleted: false },
-    });
+    const taskRef = this.tasksCollection.doc(id);
+    const taskDoc = await taskRef.get();
 
-    if (!task) {
+    if (!taskDoc.exists || taskDoc.data().userId !== userId || taskDoc.data().isDeleted) {
       throw new NotFoundException('Task not found');
     }
 
-    await this.prisma.task.update({
-      where: { id },
-      data: {
-        isDeleted: true,
-        deletedAt: new Date(),
-      },
+    await taskRef.update({
+      isDeleted: true,
+      deletedAt: new Date(),
+      updatedAt: new Date(),
     });
 
     return { message: 'Task deleted successfully' };
   }
 
   async getTasksByStatus(userId: string) {
-    const tasks = await this.prisma.task.groupBy({
-      by: ['status'],
-      where: {
-        userId,
-        isDeleted: false,
-      },
-      _count: {
-        id: true,
-      },
-    });
+    const statuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'OVERDUE'];
+    const counts = await Promise.all(statuses.map(async (status) => {
+      const snapshot = await this.tasksCollection
+        .where('userId', '==', userId)
+        .where('isDeleted', '==', false)
+        .where('status', '==', status)
+        .count()
+        .get();
+      return { status, count: snapshot.data().count };
+    }));
 
-    return tasks.reduce((acc, task) => {
-      acc[task.status] = task._count.id;
+    return counts.reduce((acc, item) => {
+      acc[item.status] = item.count;
       return acc;
     }, {} as Record<string, number>);
   }
 
   async getOverdueTasks(userId: string) {
     const now = new Date();
-    
-    const overdueTasks = await this.prisma.task.findMany({
-      where: {
-        userId,
-        isDeleted: false,
-        status: { not: 'COMPLETED' },
-        dueDate: { lt: now },
-      },
-      include: {
-        taskStakeholders: {
-          include: {
-            stakeholder: true,
-          },
-        },
-      },
-      orderBy: { dueDate: 'asc' },
-    });
 
-    // Update overdue tasks status
-    if (overdueTasks.length > 0) {
-      await this.prisma.task.updateMany({
-        where: {
-          id: { in: overdueTasks.map(t => t.id) },
-          status: { not: 'OVERDUE' },
-        },
-        data: { status: 'OVERDUE' },
-      });
-    }
+    const snapshot = await this.tasksCollection
+      .where('userId', '==', userId)
+      .where('isDeleted', '==', false)
+      .where('status', '!=', 'COMPLETED')
+      .where('dueDate', '<', now)
+      .get();
+
+    const overdueTasks = await Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const stakeholders = await this.getTaskStakeholders(doc.id);
+
+      // Update status to OVERDUE if not already
+      if (data.status !== 'OVERDUE') {
+        await doc.ref.update({ status: 'OVERDUE', updatedAt: new Date() });
+      }
+
+      return { id: doc.id, ...data, status: 'OVERDUE', taskStakeholders: stakeholders };
+    }));
 
     return overdueTasks;
   }
@@ -293,24 +290,31 @@ export class TasksService {
     const futureDate = new Date();
     futureDate.setDate(now.getDate() + days);
 
-    return this.prisma.task.findMany({
-      where: {
-        userId,
-        isDeleted: false,
-        status: { notIn: ['COMPLETED', 'CANCELLED'] },
-        dueDate: {
-          gte: now,
-          lte: futureDate,
-        },
-      },
-      include: {
-        taskStakeholders: {
-          include: {
-            stakeholder: true,
-          },
-        },
-      },
-      orderBy: { dueDate: 'asc' },
-    });
+    const snapshot = await this.tasksCollection
+      .where('userId', '==', userId)
+      .where('isDeleted', '==', false)
+      .where('dueDate', '>=', now)
+      .where('dueDate', '<=', futureDate)
+      .get();
+
+    return Promise.all(snapshot.docs
+      .filter(doc => !['COMPLETED', 'CANCELLED'].includes(doc.data().status))
+      .map(async (doc) => {
+        const data = doc.data();
+        const stakeholders = await this.getTaskStakeholders(doc.id);
+        return { id: doc.id, ...data, taskStakeholders: stakeholders };
+      }));
+  }
+
+  private async getTaskStakeholders(taskId: string) {
+    const snapshot = await this.taskStakeholdersCollection.where('taskId', '==', taskId).get();
+    return Promise.all(snapshot.docs.map(async (doc) => {
+      const mapping = doc.data();
+      const stakeholderDoc = await this.firestore.collection('stakeholders').doc(mapping.stakeholderId).get();
+      return {
+        ...mapping,
+        stakeholder: stakeholderDoc.exists ? { id: stakeholderDoc.id, ...stakeholderDoc.data() } : null,
+      };
+    }));
   }
 }

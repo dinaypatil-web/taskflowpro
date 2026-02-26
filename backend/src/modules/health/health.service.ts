@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../shared/prisma/prisma.service';
+import { FirestoreService } from '../../shared/firestore/firestore.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class HealthService {
   constructor(
-    private prisma: PrismaService,
+    private firestore: FirestoreService,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   async getHealthStatus() {
     const checks = await Promise.allSettled([
@@ -38,7 +38,8 @@ export class HealthService {
 
   private async checkDatabase() {
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      // Just check if we can access a collection
+      await this.firestore.collection('health_check').limit(1).get();
       return { status: 'ok', responseTime: Date.now() };
     } catch (error) {
       return { status: 'error', error: error.message };
@@ -47,7 +48,6 @@ export class HealthService {
 
   private async checkRedis() {
     try {
-      // This would require Redis client injection
       // For now, we'll assume it's healthy if the service starts
       return { status: 'ok', responseTime: Date.now() };
     } catch (error) {

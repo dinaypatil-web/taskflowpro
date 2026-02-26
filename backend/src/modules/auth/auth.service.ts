@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
-import { PrismaService } from '../../shared/prisma/prisma.service';
+import { FirestoreService } from '../../shared/firestore/firestore.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -20,26 +20,31 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
+    private firestore: FirestoreService,
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) { }
+
+  private get usersCollection() {
+    return this.firestore.collection('users');
+  }
+
+  private get tokensCollection() {
+    return this.firestore.collection('verification_tokens');
+  }
 
   async register(registerDto: RegisterDto) {
     const { email, phone, password, firstName, lastName } = registerDto;
 
     // Check if user already exists
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email },
-          ...(phone ? [{ phone }] : []),
-        ],
-      },
-    });
+    const emailCheck = await this.usersCollection.where('email', '==', email).limit(1).get();
+    let phoneCheck = null;
+    if (phone) {
+      phoneCheck = await this.usersCollection.where('phone', '==', phone).limit(1).get();
+    }
 
-    if (existingUser) {
+    if (!emailCheck.empty || (phoneCheck && !phoneCheck.empty)) {
       throw new ConflictException('User with this email or phone already exists');
     }
 
@@ -47,25 +52,34 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        phone,
-        firstName,
-        lastName,
-        password: hashedPassword,
-      },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        firstName: true,
-        lastName: true,
-        isEmailVerified: true,
-        isPhoneVerified: true,
-        createdAt: true,
-      },
-    });
+    const userRef = this.usersCollection.doc();
+    const now = new Date();
+    const newUser = {
+      email,
+      phone,
+      firstName,
+      lastName,
+      password: hashedPassword,
+      isEmailVerified: false,
+      isPhoneVerified: false,
+      isActive: true,
+      lastLoginAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await userRef.set(newUser);
+
+    const user = {
+      id: userRef.id,
+      email,
+      phone,
+      firstName,
+      lastName,
+      isEmailVerified: false,
+      isPhoneVerified: false,
+      createdAt: now,
+    };
 
     // Generate verification tokens
     await this.generateVerificationToken(user.id, 'EMAIL');
@@ -91,34 +105,32 @@ export class AuthService {
     }
 
     // Update last login
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+    await this.usersCollection.doc(user.id).update({
+      lastLoginAt: new Date(),
+      updatedAt: new Date(),
     });
 
     const tokens = await this.generateTokens(user.id);
 
     return {
       user: {
-        id: user.id,
-        email: user.email,
-        phone: user.phone,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isEmailVerified: user.isEmailVerified,
-        isPhoneVerified: user.isPhoneVerified,
+        id: (user as any).id,
+        email: (user as any).email,
+        phone: (user as any).phone,
+        firstName: (user as any).firstName,
+        lastName: (user as any).lastName,
+        isEmailVerified: (user as any).isEmailVerified,
+        isPhoneVerified: (user as any).isPhoneVerified,
       },
       ...tokens,
     };
   }
 
   async validateUser(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    const user = await this.usersService.findByEmail(email);
 
-    if (user && await bcrypt.compare(password, user.password)) {
-      const { password: _, ...result } = user;
+    if (user && await bcrypt.compare(password, (user as any).password)) {
+      const { password: _, ...result } = user as any;
       return result;
     }
     return null;
@@ -127,52 +139,54 @@ export class AuthService {
   async verifyToken(verifyTokenDto: VerifyTokenDto) {
     const { token } = verifyTokenDto;
 
-    const verificationToken = await this.prisma.verificationToken.findUnique({
-      where: { token },
-      include: { user: true },
-    });
+    const snapshot = await this.tokensCollection.where('token', '==', token).limit(1).get();
 
-    if (!verificationToken || verificationToken.isUsed || verificationToken.expiresAt < new Date()) {
+    if (snapshot.empty) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+
+    const tokenDoc = snapshot.docs[0];
+    const tokenData = tokenDoc.data();
+
+    if (tokenData.isUsed || tokenData.expiresAt.toDate() < new Date()) {
       throw new BadRequestException('Invalid or expired token');
     }
 
     // Mark token as used
-    await this.prisma.verificationToken.update({
-      where: { id: verificationToken.id },
-      data: { isUsed: true },
-    });
+    await tokenDoc.ref.update({ isUsed: true, updatedAt: new Date() });
 
     // Update user verification status
-    const updateData: any = {};
-    if (verificationToken.type === 'EMAIL') {
+    const updateData: any = { updatedAt: new Date() };
+    if (tokenData.type === 'EMAIL') {
       updateData.isEmailVerified = true;
-    } else if (verificationToken.type === 'PHONE') {
+    } else if (tokenData.type === 'PHONE') {
       updateData.isPhoneVerified = true;
     }
 
-    const user = await this.prisma.user.update({
-      where: { id: verificationToken.userId },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        firstName: true,
-        lastName: true,
-        isEmailVerified: true,
-        isPhoneVerified: true,
-      },
-    });
+    const userRef = this.usersCollection.doc(tokenData.userId);
+    await userRef.update(updateData);
 
-    return { user, message: 'Verification successful' };
+    const userDoc = await userRef.get();
+    const userData = userDoc.data();
+
+    return {
+      user: {
+        id: userDoc.id,
+        email: userData.email,
+        phone: userData.phone,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        isEmailVerified: userData.isEmailVerified,
+        isPhoneVerified: userData.isPhoneVerified,
+      },
+      message: 'Verification successful'
+    };
   }
 
   async requestPasswordReset(requestPasswordResetDto: RequestPasswordResetDto) {
     const { email } = requestPasswordResetDto;
 
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    const user = await this.usersService.findByEmail(email);
 
     if (!user) {
       // Don't reveal if user exists
@@ -187,33 +201,34 @@ export class AuthService {
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
 
-    const verificationToken = await this.prisma.verificationToken.findUnique({
-      where: { token },
-      include: { user: true },
-    });
+    const snapshot = await this.tokensCollection.where('token', '==', token).limit(1).get();
 
-    if (!verificationToken || verificationToken.isUsed || verificationToken.expiresAt < new Date()) {
+    if (snapshot.empty) {
       throw new BadRequestException('Invalid or expired token');
     }
 
-    if (verificationToken.type !== 'PASSWORD_RESET') {
-      throw new BadRequestException('Invalid token type');
+    const tokenDoc = snapshot.docs[0];
+    const tokenData = tokenDoc.data();
+
+    if (tokenData.isUsed || tokenData.expiresAt.toDate() < new Date() || tokenData.type !== 'PASSWORD_RESET') {
+      throw new BadRequestException('Invalid or expired token');
     }
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update password and mark token as used
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: verificationToken.userId },
-        data: { password: hashedPassword },
-      }),
-      this.prisma.verificationToken.update({
-        where: { id: verificationToken.id },
-        data: { isUsed: true },
-      }),
-    ]);
+    // Update password and mark token as used in a transaction
+    await this.firestore.getDb().runTransaction(async (transaction) => {
+      const userRef = this.usersCollection.doc(tokenData.userId);
+      transaction.update(userRef, {
+        password: hashedPassword,
+        updatedAt: new Date(),
+      });
+      transaction.update(tokenDoc.ref, {
+        isUsed: true,
+        updatedAt: new Date(),
+      });
+    });
 
     return { message: 'Password reset successful' };
   }
@@ -257,13 +272,15 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours
 
-    return this.prisma.verificationToken.create({
-      data: {
-        userId,
-        token,
-        type,
-        expiresAt,
-      },
+    const tokenRef = this.tokensCollection.doc();
+    return tokenRef.set({
+      userId,
+      token,
+      type,
+      expiresAt,
+      isUsed: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   }
 }

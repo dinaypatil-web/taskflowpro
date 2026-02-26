@@ -1,159 +1,117 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../shared/prisma/prisma.service';
+import { FirestoreService } from '../../shared/firestore/firestore.service';
 import { CreateCalendarEventDto } from './dto/create-calendar-event.dto';
 import { UpdateCalendarEventDto } from './dto/update-calendar-event.dto';
 import { CalendarQueryDto } from './dto/calendar-query.dto';
 
 @Injectable()
 export class CalendarService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private firestore: FirestoreService) { }
+
+  private get eventsCollection() {
+    return this.firestore.collection('calendar_events');
+  }
 
   async createEvent(userId: string, createEventDto: CreateCalendarEventDto) {
-    const event = await this.prisma.calendarEvent.create({
-      data: {
-        ...createEventDto,
-        userId,
-        startDate: new Date(createEventDto.startDate),
-        endDate: new Date(createEventDto.endDate),
-      },
-      include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-          },
-        },
-      },
-    });
+    const eventRef = this.eventsCollection.doc();
+    const now = new Date();
+    const event = {
+      ...createEventDto,
+      userId,
+      startDate: new Date(createEventDto.startDate),
+      endDate: new Date(createEventDto.endDate),
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    return event;
+    await eventRef.set(event);
+    return { id: eventRef.id, ...event };
   }
 
   async findEvents(userId: string, query: CalendarQueryDto) {
     const { startDate, endDate, taskId } = query;
 
-    const where: any = {
-      userId,
-    };
-
-    if (startDate && endDate) {
-      where.OR = [
-        {
-          startDate: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
-          },
-        },
-        {
-          endDate: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
-          },
-        },
-        {
-          AND: [
-            { startDate: { lte: new Date(startDate) } },
-            { endDate: { gte: new Date(endDate) } },
-          ],
-        },
-      ];
-    }
+    let firestoreQuery: any = this.eventsCollection.where('userId', '==', userId);
 
     if (taskId) {
-      where.taskId = taskId;
+      firestoreQuery = firestoreQuery.where('taskId', '==', taskId);
     }
 
-    const events = await this.prisma.calendarEvent.findMany({
-      where,
-      include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            priority: true,
-          },
-        },
-      },
-      orderBy: { startDate: 'asc' },
-    });
+    // Firestore date filtering is limited for multiple fields. 
+    // We'll filter by startDate and then refine if needed.
+    if (startDate) {
+      firestoreQuery = firestoreQuery.where('startDate', '>=', new Date(startDate));
+    }
+    if (endDate) {
+      firestoreQuery = firestoreQuery.where('startDate', '<=', new Date(endDate));
+    }
 
-    return events;
+    const snapshot = await firestoreQuery.orderBy('startDate', 'asc').get();
+
+    return Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const taskDoc = data.taskId ? await this.firestore.collection('tasks').doc(data.taskId).get() : null;
+      return {
+        id: doc.id,
+        ...data,
+        task: taskDoc?.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
+        startDate: data.startDate?.toDate(),
+        endDate: data.endDate?.toDate(),
+        createdAt: data.createdAt?.toDate(),
+        updatedAt: data.updatedAt?.toDate(),
+      };
+    }));
   }
 
   async findOne(userId: string, id: string) {
-    const event = await this.prisma.calendarEvent.findFirst({
-      where: { id, userId },
-      include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            status: true,
-            priority: true,
-            dueDate: true,
-          },
-        },
-      },
-    });
+    const eventDoc = await this.eventsCollection.doc(id).get();
 
-    if (!event) {
+    if (!eventDoc.exists || eventDoc.data().userId !== userId) {
       throw new NotFoundException('Calendar event not found');
     }
 
-    return event;
+    const data = eventDoc.data();
+    const taskDoc = data.taskId ? await this.firestore.collection('tasks').doc(data.taskId).get() : null;
+
+    return {
+      id: eventDoc.id,
+      ...data,
+      task: taskDoc?.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
+      startDate: data.startDate?.toDate(),
+      endDate: data.endDate?.toDate(),
+      createdAt: data.createdAt?.toDate(),
+      updatedAt: data.updatedAt?.toDate(),
+    };
   }
 
   async update(userId: string, id: string, updateEventDto: UpdateCalendarEventDto) {
-    const existingEvent = await this.prisma.calendarEvent.findFirst({
-      where: { id, userId },
-    });
+    const eventRef = this.eventsCollection.doc(id);
+    const eventDoc = await eventRef.get();
 
-    if (!existingEvent) {
+    if (!eventDoc.exists || eventDoc.data().userId !== userId) {
       throw new NotFoundException('Calendar event not found');
     }
 
-    const updateData: any = { ...updateEventDto };
-    if (updateEventDto.startDate) {
-      updateData.startDate = new Date(updateEventDto.startDate);
-    }
-    if (updateEventDto.endDate) {
-      updateData.endDate = new Date(updateEventDto.endDate);
-    }
+    const updateData: any = {
+      ...updateEventDto,
+      updatedAt: new Date(),
+    };
+    if (updateEventDto.startDate) updateData.startDate = new Date(updateEventDto.startDate);
+    if (updateEventDto.endDate) updateData.endDate = new Date(updateEventDto.endDate);
 
-    const event = await this.prisma.calendarEvent.update({
-      where: { id },
-      data: updateData,
-      include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            priority: true,
-          },
-        },
-      },
-    });
-
-    return event;
+    await eventRef.update(updateData);
+    return this.findOne(userId, id);
   }
 
   async remove(userId: string, id: string) {
-    const event = await this.prisma.calendarEvent.findFirst({
-      where: { id, userId },
-    });
+    const eventRef = this.eventsCollection.doc(id);
+    const eventDoc = await eventRef.get();
 
-    if (!event) {
+    if (!eventDoc.exists || eventDoc.data().userId !== userId) {
       throw new NotFoundException('Calendar event not found');
     }
 
-    await this.prisma.calendarEvent.delete({
-      where: { id },
-    });
-
+    await eventRef.delete();
     return { message: 'Calendar event deleted successfully' };
   }
 
@@ -161,46 +119,9 @@ export class CalendarService {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
-    const events = await this.prisma.calendarEvent.findMany({
-      where: {
-        userId,
-        OR: [
-          {
-            startDate: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-          {
-            endDate: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-          {
-            AND: [
-              { startDate: { lte: startDate } },
-              { endDate: { gte: endDate } },
-            ],
-          },
-        ],
-      },
-      include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            priority: true,
-          },
-        },
-      },
-      orderBy: { startDate: 'asc' },
-    });
+    const events = await this.findEvents(userId, { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
 
-    // Group events by date
     const eventsByDate: Record<string, any[]> = {};
-    
     events.forEach(event => {
       const eventDate = event.startDate.toISOString().split('T')[0];
       if (!eventsByDate[eventDate]) {
@@ -223,42 +144,7 @@ export class CalendarService {
     end.setDate(start.getDate() + 6);
     end.setHours(23, 59, 59);
 
-    const events = await this.prisma.calendarEvent.findMany({
-      where: {
-        userId,
-        OR: [
-          {
-            startDate: {
-              gte: start,
-              lte: end,
-            },
-          },
-          {
-            endDate: {
-              gte: start,
-              lte: end,
-            },
-          },
-          {
-            AND: [
-              { startDate: { lte: start } },
-              { endDate: { gte: end } },
-            ],
-          },
-        ],
-      },
-      include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            priority: true,
-          },
-        },
-      },
-      orderBy: { startDate: 'asc' },
-    });
+    const events = await this.findEvents(userId, { startDate: start.toISOString(), endDate: end.toISOString() });
 
     return {
       startDate: start,
@@ -274,44 +160,7 @@ export class CalendarService {
     const end = new Date(date);
     end.setHours(23, 59, 59, 999);
 
-    const events = await this.prisma.calendarEvent.findMany({
-      where: {
-        userId,
-        OR: [
-          {
-            startDate: {
-              gte: start,
-              lte: end,
-            },
-          },
-          {
-            endDate: {
-              gte: start,
-              lte: end,
-            },
-          },
-          {
-            AND: [
-              { startDate: { lte: start } },
-              { endDate: { gte: end } },
-            ],
-          },
-        ],
-      },
-      include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            status: true,
-            priority: true,
-            dueDate: true,
-          },
-        },
-      },
-      orderBy: { startDate: 'asc' },
-    });
+    const events = await this.findEvents(userId, { startDate: start.toISOString(), endDate: end.toISOString() });
 
     return {
       date: start,
@@ -321,63 +170,39 @@ export class CalendarService {
   }
 
   async syncTaskToCalendar(userId: string, taskId: string) {
-    const task = await this.prisma.task.findFirst({
-      where: { id: taskId, userId, isDeleted: false },
-    });
+    const taskDoc = await this.firestore.collection('tasks').doc(taskId).get();
 
-    if (!task || !task.dueDate) {
+    if (!taskDoc.exists || taskDoc.data().userId !== userId || !taskDoc.data().dueDate) {
       throw new NotFoundException('Task not found or has no due date');
     }
 
-    // Check if calendar event already exists for this task
-    const existingEvent = await this.prisma.calendarEvent.findFirst({
-      where: { taskId, userId },
-    });
+    const task = taskDoc.data();
+    const existingEvents = await this.eventsCollection.where('taskId', '==', taskId).where('userId', '==', userId).limit(1).get();
 
-    if (existingEvent) {
-      // Update existing event
-      return this.prisma.calendarEvent.update({
-        where: { id: existingEvent.id },
-        data: {
-          title: task.title,
-          description: task.description,
-          startDate: task.dueDate,
-          endDate: task.dueDate,
-        },
-        include: {
-          task: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              priority: true,
-            },
-          },
-        },
+    if (!existingEvents.empty) {
+      const eventRef = existingEvents.docs[0].ref;
+      await eventRef.update({
+        title: task.title,
+        description: task.description,
+        startDate: task.dueDate,
+        endDate: task.dueDate,
+        updatedAt: new Date(),
       });
+      return this.findOne(userId, eventRef.id);
     } else {
-      // Create new event
-      return this.prisma.calendarEvent.create({
-        data: {
-          userId,
-          taskId,
-          title: task.title,
-          description: task.description,
-          startDate: task.dueDate,
-          endDate: task.dueDate,
-          isAllDay: true,
-        },
-        include: {
-          task: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              priority: true,
-            },
-          },
-        },
+      const eventRef = this.eventsCollection.doc();
+      await eventRef.set({
+        userId,
+        taskId,
+        title: task.title,
+        description: task.description,
+        startDate: task.dueDate,
+        endDate: task.dueDate,
+        isAllDay: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
+      return this.findOne(userId, eventRef.id);
     }
   }
 }

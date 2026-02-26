@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 // import { BullModule } from '@nestjs/bullmq';
 
-import { PrismaModule } from './shared/prisma/prisma.module';
+import { FirestoreModule } from './shared/firestore/firestore.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TasksModule } from './modules/tasks/tasks.module';
@@ -29,19 +29,8 @@ import { HealthModule } from './modules/health/health.module';
       },
     ]),
 
-    // Redis/BullMQ for background jobs (disabled for development)
-    // BullModule.forRootAsync({
-    //   useFactory: () => ({
-    //     connection: {
-    //       host: process.env.REDIS_HOST || 'localhost',
-    //       port: parseInt(process.env.REDIS_PORT) || 6379,
-    //       password: process.env.REDIS_PASSWORD,
-    //     },
-    //   }),
-    // }),
-
     // Core modules
-    PrismaModule,
+    FirestoreModule,
     AuthModule,
     UsersModule,
     TasksModule,
@@ -52,4 +41,4 @@ import { HealthModule } from './modules/health/health.module';
     HealthModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

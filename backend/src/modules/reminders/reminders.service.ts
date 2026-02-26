@@ -1,52 +1,41 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-// import { InjectQueue } from '@nestjs/bullmq';
-// import { Queue } from 'bullmq';
-import { PrismaService } from '../../shared/prisma/prisma.service';
+import { FirestoreService } from '../../shared/firestore/firestore.service';
 import { CreateReminderDto } from './dto/create-reminder.dto';
 import { UpdateReminderDto } from './dto/update-reminder.dto';
 import { ReminderQueryDto } from './dto/reminder-query.dto';
 
 @Injectable()
 export class RemindersService {
-  constructor(
-    private prisma: PrismaService,
-    // @InjectQueue('reminders') private reminderQueue: Queue,
-  ) {}
+  constructor(private firestore: FirestoreService) { }
+
+  private get remindersCollection() {
+    return this.firestore.collection('reminders');
+  }
 
   async create(userId: string, createReminderDto: CreateReminderDto) {
     const { taskId, ...reminderData } = createReminderDto;
 
     // Verify task belongs to user
-    const task = await this.prisma.task.findFirst({
-      where: { id: taskId, userId, isDeleted: false },
-    });
-
-    if (!task) {
+    const taskDoc = await this.firestore.collection('tasks').doc(taskId).get();
+    if (!taskDoc.exists || taskDoc.data().userId !== userId) {
       throw new NotFoundException('Task not found');
     }
 
-    const reminder = await this.prisma.reminder.create({
-      data: {
-        ...reminderData,
-        taskId,
-      },
-      include: {
-        task: {
-          include: {
-            taskStakeholders: {
-              include: {
-                stakeholder: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const reminderRef = this.remindersCollection.doc();
+    const now = new Date();
+    const reminder = {
+      ...reminderData,
+      taskId,
+      userId, // Denormalize userId for easy querying
+      status: 'PENDING',
+      attempts: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    // Schedule the reminder job (disabled for development)
-    // await this.scheduleReminderJob(reminder);
+    await reminderRef.set(reminder);
 
-    return reminder;
+    return { id: reminderRef.id, ...reminder };
   }
 
   async findAll(userId: string, query: ReminderQueryDto) {
@@ -60,50 +49,38 @@ export class RemindersService {
       sortOrder = 'asc',
     } = query;
 
-    const skip = (page - 1) * limit;
-
-    const where: any = {
-      task: {
-        userId,
-        isDeleted: false,
-      },
-    };
+    let firestoreQuery: any = this.remindersCollection.where('userId', '==', userId);
 
     if (status) {
-      where.status = status;
+      firestoreQuery = firestoreQuery.where('status', '==', status);
     }
-
     if (type) {
-      where.type = type;
+      firestoreQuery = firestoreQuery.where('type', '==', type);
     }
-
     if (taskId) {
-      where.taskId = taskId;
+      firestoreQuery = firestoreQuery.where('taskId', '==', taskId);
     }
 
-    const [reminders, total] = await Promise.all([
-      this.prisma.reminder.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
-        include: {
-          task: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              dueDate: true,
-            },
-          },
-          reminderLogs: {
-            orderBy: { createdAt: 'desc' },
-            take: 3,
-          },
-        },
-      }),
-      this.prisma.reminder.count({ where }),
-    ]);
+    firestoreQuery = firestoreQuery.orderBy(sortBy, sortOrder);
+
+    const countSnapshot = await firestoreQuery.count().get();
+    const total = countSnapshot.data().count;
+
+    const offset = (page - 1) * limit;
+    const snapshot = await firestoreQuery.offset(offset).limit(limit).get();
+
+    const reminders = await Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const taskDoc = await this.firestore.collection('tasks').doc(data.taskId).get();
+      return {
+        id: doc.id,
+        ...data,
+        task: taskDoc.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
+        scheduledAt: data.scheduledAt?.toDate(),
+        createdAt: data.createdAt?.toDate(),
+        updatedAt: data.updatedAt?.toDate(),
+      };
+    }));
 
     return {
       reminders,
@@ -117,285 +94,147 @@ export class RemindersService {
   }
 
   async findOne(userId: string, id: string) {
-    const reminder = await this.prisma.reminder.findFirst({
-      where: {
-        id,
-        task: {
-          userId,
-          isDeleted: false,
-        },
-      },
-      include: {
-        task: {
-          include: {
-            taskStakeholders: {
-              include: {
-                stakeholder: true,
-              },
-            },
-          },
-        },
-        reminderLogs: {
-          orderBy: { createdAt: 'desc' },
-          include: {
-            stakeholder: true,
-          },
-        },
-      },
-    });
+    const reminderDoc = await this.remindersCollection.doc(id).get();
 
-    if (!reminder) {
+    if (!reminderDoc.exists || reminderDoc.data().userId !== userId) {
       throw new NotFoundException('Reminder not found');
     }
 
-    return reminder;
+    const data = reminderDoc.data();
+    const [taskDoc, logsSnapshot] = await Promise.all([
+      this.firestore.collection('tasks').doc(data.taskId).get(),
+      this.firestore.collection('reminder_logs').where('reminderId', '==', id).orderBy('createdAt', 'desc').get(),
+    ]);
+
+    return {
+      id: reminderDoc.id,
+      ...data,
+      task: taskDoc.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
+      reminderLogs: logsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
+      scheduledAt: data.scheduledAt?.toDate(),
+      createdAt: data.createdAt?.toDate(),
+      updatedAt: data.updatedAt?.toDate(),
+    };
   }
 
   async update(userId: string, id: string, updateReminderDto: UpdateReminderDto) {
-    const existingReminder = await this.prisma.reminder.findFirst({
-      where: {
-        id,
-        task: {
-          userId,
-          isDeleted: false,
-        },
-      },
-    });
+    const reminderRef = this.remindersCollection.doc(id);
+    const reminderDoc = await reminderRef.get();
 
-    if (!existingReminder) {
+    if (!reminderDoc.exists || reminderDoc.data().userId !== userId) {
       throw new NotFoundException('Reminder not found');
     }
 
-    const reminder = await this.prisma.reminder.update({
-      where: { id },
-      data: updateReminderDto,
-      include: {
-        task: {
-          include: {
-            taskStakeholders: {
-              include: {
-                stakeholder: true,
-              },
-            },
-          },
-        },
-      },
+    await reminderRef.update({
+      ...updateReminderDto,
+      updatedAt: new Date(),
     });
 
-    // Reschedule if scheduledAt changed and status is PENDING (disabled for development)
-    // if (updateReminderDto.scheduledAt && reminder.status === 'PENDING') {
-    //   await this.scheduleReminderJob(reminder);
-    // }
-
-    return reminder;
+    return this.findOne(userId, id);
   }
 
   async cancel(userId: string, id: string) {
-    const reminder = await this.prisma.reminder.findFirst({
-      where: {
-        id,
-        task: {
-          userId,
-          isDeleted: false,
-        },
-      },
-    });
+    const reminderRef = this.remindersCollection.doc(id);
+    const reminderDoc = await reminderRef.get();
 
-    if (!reminder) {
+    if (!reminderDoc.exists || reminderDoc.data().userId !== userId) {
       throw new NotFoundException('Reminder not found');
     }
 
-    await this.prisma.reminder.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
-    });
-
-    // Remove from queue (disabled for development)
-    // await this.reminderQueue.removeJobs(`reminder-${id}`);
-
+    await reminderRef.update({ status: 'CANCELLED', updatedAt: new Date() });
     return { message: 'Reminder cancelled successfully' };
   }
 
   async createTaskDueReminder(taskId: string, scheduledAt: Date) {
-    const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
-      include: {
-        taskStakeholders: {
-          include: {
-            stakeholder: true,
-          },
-        },
-      },
-    });
+    const taskDoc = await this.firestore.collection('tasks').doc(taskId).get();
+    if (!taskDoc.exists) return;
 
-    if (!task) return;
+    const taskData = taskDoc.data();
+    const reminderRef = this.remindersCollection.doc();
+    const reminder = {
+      taskId,
+      userId: taskData.userId,
+      type: 'TASK_DUE',
+      scheduledAt,
+      message: `Task "${taskData.title}" is due soon`,
+      status: 'PENDING',
+      attempts: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-    const reminder = await this.prisma.reminder.create({
-      data: {
-        taskId,
-        type: 'TASK_DUE',
-        scheduledAt,
-        message: `Task "${task.title}" is due soon`,
-      },
-      include: {
-        task: {
-          include: {
-            taskStakeholders: {
-              include: {
-                stakeholder: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    await this.scheduleReminderJob(reminder);
-    return reminder;
+    await reminderRef.set(reminder);
+    return { id: reminderRef.id, ...reminder };
   }
 
   async createOverdueReminder(taskId: string) {
-    const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
-      include: {
-        taskStakeholders: {
-          include: {
-            stakeholder: true,
-          },
-        },
-      },
-    });
+    const taskDoc = await this.firestore.collection('tasks').doc(taskId).get();
+    if (!taskDoc.exists) return;
 
-    if (!task) return;
+    const taskData = taskDoc.data();
+    const reminderRef = this.remindersCollection.doc();
+    const reminder = {
+      taskId,
+      userId: taskData.userId,
+      type: 'TASK_OVERDUE',
+      scheduledAt: new Date(),
+      message: `Task "${taskData.title}" is overdue`,
+      status: 'PENDING',
+      attempts: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-    const reminder = await this.prisma.reminder.create({
-      data: {
-        taskId,
-        type: 'TASK_OVERDUE',
-        scheduledAt: new Date(),
-        message: `Task "${task.title}" is overdue`,
-      },
-      include: {
-        task: {
-          include: {
-            taskStakeholders: {
-              include: {
-                stakeholder: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    await this.scheduleReminderJob(reminder);
-    return reminder;
-  }
-
-  private async scheduleReminderJob(reminder: any) {
-    // Disabled for development - would normally schedule with BullMQ
-    console.log('Would schedule reminder job for:', reminder.id);
-    return;
-    
-    /*
-    const delay = reminder.scheduledAt.getTime() - Date.now();
-    
-    if (delay > 0) {
-      await this.reminderQueue.add(
-        'process-reminder',
-        { reminderId: reminder.id },
-        {
-          delay,
-          jobId: `reminder-${reminder.id}`,
-          removeOnComplete: 10,
-          removeOnFail: 5,
-        },
-      );
-    } else {
-      // Schedule immediately if time has passed
-      await this.reminderQueue.add(
-        'process-reminder',
-        { reminderId: reminder.id },
-        {
-          jobId: `reminder-${reminder.id}`,
-          removeOnComplete: 10,
-          removeOnFail: 5,
-        },
-      );
-    }
-    */
+    await reminderRef.set(reminder);
+    return { id: reminderRef.id, ...reminder };
   }
 
   async getPendingReminders(userId: string) {
-    return this.prisma.reminder.findMany({
-      where: {
-        task: {
-          userId,
-          isDeleted: false,
-        },
-        status: 'PENDING',
-        scheduledAt: {
-          lte: new Date(Date.now() + 24 * 60 * 60 * 1000), // Next 24 hours
-        },
-      },
-      include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-            dueDate: true,
-          },
-        },
-      },
-      orderBy: { scheduledAt: 'asc' },
-    });
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const snapshot = await this.remindersCollection
+      .where('userId', '==', userId)
+      .where('status', '==', 'PENDING')
+      .where('scheduledAt', '<=', tomorrow)
+      .orderBy('scheduledAt', 'asc')
+      .get();
+
+    return Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const taskDoc = await this.firestore.collection('tasks').doc(data.taskId).get();
+      return {
+        id: doc.id,
+        ...data,
+        task: taskDoc.exists ? { id: taskDoc.id, title: taskDoc.data().title, dueDate: taskDoc.data().dueDate?.toDate() } : null,
+        scheduledAt: data.scheduledAt?.toDate(),
+      };
+    }));
   }
 
   async getReminderStats(userId: string) {
-    const [totalReminders, sentReminders, pendingReminders, failedReminders] = await Promise.all([
-      this.prisma.reminder.count({
-        where: {
-          task: {
-            userId,
-            isDeleted: false,
-          },
-        },
-      }),
-      this.prisma.reminder.count({
-        where: {
-          task: {
-            userId,
-            isDeleted: false,
-          },
-          status: 'SENT',
-        },
-      }),
-      this.prisma.reminder.count({
-        where: {
-          task: {
-            userId,
-            isDeleted: false,
-          },
-          status: 'PENDING',
-        },
-      }),
-      this.prisma.reminder.count({
-        where: {
-          task: {
-            userId,
-            isDeleted: false,
-          },
-          status: 'FAILED',
-        },
-      }),
-    ]);
+    const statuses = ['SENT', 'PENDING', 'FAILED'];
+    const counts = await Promise.all(statuses.map(async (status) => {
+      const snapshot = await this.remindersCollection
+        .where('userId', '==', userId)
+        .where('status', '==', status)
+        .count()
+        .get();
+      return { status, count: snapshot.data().count };
+    }));
+
+    const totalSnapshot = await this.remindersCollection.where('userId', '==', userId).count().get();
+    const totalReminders = totalSnapshot.data().count;
+
+    const stats = counts.reduce((acc, item) => {
+      acc[item.status] = item.count;
+      return acc;
+    }, {} as any);
 
     return {
       totalReminders,
-      sentReminders,
-      pendingReminders,
-      failedReminders,
-      successRate: totalReminders > 0 ? (sentReminders / totalReminders) * 100 : 0,
+      sentReminders: stats.SENT || 0,
+      pendingReminders: stats.PENDING || 0,
+      failedReminders: stats.FAILED || 0,
+      successRate: totalReminders > 0 ? ((stats.SENT || 0) / totalReminders) * 100 : 0,
     };
   }
 }
