@@ -9,6 +9,7 @@ import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
+import { FirestoreExceptionFilter } from './shared/firestore/firestore-exception.filter';
 
 async function bootstrap() {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -80,6 +81,9 @@ async function bootstrap() {
 
   // API prefix
   app.setGlobalPrefix('api/v1');
+
+  // Firestore specific error handling
+  app.useGlobalFilters(new FirestoreExceptionFilter());
 
   // Swagger documentation
   if (!isProduction) {
