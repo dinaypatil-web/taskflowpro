@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { formatRelativeTime, getPriorityColor, getStatusColor } from '@/lib/utils'
+import { formatStatus, formatRelativeTime, getPriorityColor, getStatusColor } from '@/lib/utils'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { Task } from '@/types/task'
 import { ArrowRight, Clock, Sparkles } from 'lucide-react'
@@ -27,7 +27,7 @@ export function RecentTasks({ tasks, isLoading }: RecentTasksProps) {
           <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
         </Link>
       </div>
-      
+
       <div>
         {isLoading ? (
           <div className="space-y-4">
@@ -73,7 +73,7 @@ export function RecentTasks({ tasks, isLoading }: RecentTasksProps) {
                     </h4>
                     <div className="flex items-center space-x-2 mb-2">
                       <span className={`badge ${getStatusColor(task.status)}`}>
-                        {task.status.replace('_', ' ')}
+                        {formatStatus(task.status)}
                       </span>
                       <span className={`badge ${getPriorityColor(task.priority)}`}>
                         {task.priority}

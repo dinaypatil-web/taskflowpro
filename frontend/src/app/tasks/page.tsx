@@ -13,18 +13,18 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { TaskStatus, Priority } from '@/types/task'
 import { AuthProtectedPage } from '@/components/ClientOnly'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  CheckSquare, 
-  Clock, 
+import {
+  Plus,
+  Search,
+  Filter,
+  CheckSquare,
+  Clock,
   AlertCircle,
   Calendar,
   User
 } from 'lucide-react'
 import Link from 'next/link'
-import { formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
+import { formatStatus, formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
 
 export default function TasksPage() {
   return (
@@ -156,33 +156,33 @@ function TasksPageContent() {
                         </h3>
                         <div className="flex items-center gap-2">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                            {task.status.replace('_', ' ')}
+                            {formatStatus(task.status)}
                           </span>
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                             {task.priority}
                           </span>
                         </div>
                       </div>
-                      
+
                       {task.description && (
                         <p className="text-sm text-gray-600 line-clamp-2 mb-3">
                           {task.description}
                         </p>
                       )}
-                      
+
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
                         <div className="flex items-center">
                           <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                           Created {formatDate(task.createdAt)}
                         </div>
-                        
+
                         {task.dueDate && (
                           <div className="flex items-center">
                             <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             Due {formatDate(task.dueDate)}
                           </div>
                         )}
-                        
+
                         {task.taskStakeholders && task.taskStakeholders.length > 0 && (
                           <div className="flex items-center">
                             <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -191,7 +191,7 @@ function TasksPageContent() {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex-shrink-0">
                       <Link
                         href={`/tasks/${task.id}`}

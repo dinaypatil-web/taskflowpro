@@ -12,16 +12,16 @@ import { tasksApi } from '@/lib/api/tasks'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AuthProtectedPage } from '@/components/ClientOnly'
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
   Calendar as CalendarIcon,
   Clock,
   User
 } from 'lucide-react'
 import Link from 'next/link'
-import { formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
+import { formatStatus, formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
 
 export default function CalendarPage() {
   return (
@@ -63,23 +63,23 @@ function CalendarPageContent() {
     const startingDayOfWeek = firstDay.getDay()
 
     const days = []
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null)
     }
-    
+
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(new Date(year, month, day))
     }
-    
+
     return days
   }
 
   const getTasksForDate = (date: Date) => {
     if (!tasks?.tasks) return []
-    
+
     return tasks.tasks.filter(task => {
       if (!task.dueDate) return false
       const taskDate = new Date(task.dueDate)
@@ -163,11 +163,10 @@ function CalendarPageContent() {
                   <button
                     key={viewType}
                     onClick={() => setView(viewType)}
-                    className={`flex-1 sm:flex-none px-3 py-2 text-sm capitalize ${
-                      view === viewType
-                        ? 'bg-primary-500 text-white'
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                    className={`flex-1 sm:flex-none px-3 py-2 text-sm capitalize ${view === viewType
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
                   >
                     {viewType}
                   </button>
@@ -200,7 +199,7 @@ function CalendarPageContent() {
                 }
 
                 const dayTasks = getTasksForDate(day)
-                const isToday = 
+                const isToday =
                   day.getDate() === new Date().getDate() &&
                   day.getMonth() === new Date().getMonth() &&
                   day.getFullYear() === new Date().getFullYear()
@@ -208,16 +207,14 @@ function CalendarPageContent() {
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`p-2 sm:p-3 min-h-[80px] sm:min-h-[120px] border border-gray-200 bg-white hover:bg-gray-50 ${
-                      isToday ? 'ring-2 ring-primary-500' : ''
-                    }`}
+                    className={`p-2 sm:p-3 min-h-[80px] sm:min-h-[120px] border border-gray-200 bg-white hover:bg-gray-50 ${isToday ? 'ring-2 ring-primary-500' : ''
+                      }`}
                   >
-                    <div className={`text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${
-                      isToday ? 'text-primary-600' : 'text-gray-900'
-                    }`}>
+                    <div className={`text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${isToday ? 'text-primary-600' : 'text-gray-900'
+                      }`}>
                       {day.getDate()}
                     </div>
-                    
+
                     <div className="space-y-1">
                       {dayTasks.slice(0, 2).map((task) => (
                         <Link
@@ -228,7 +225,7 @@ function CalendarPageContent() {
                           {task.title}
                         </Link>
                       ))}
-                      
+
                       {dayTasks.length > 2 && (
                         <div className="text-xs text-gray-500">
                           +{dayTasks.length - 2} more
@@ -247,7 +244,7 @@ function CalendarPageContent() {
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">Upcoming Tasks</h3>
           </div>
-          
+
           <div className="p-6">
             {isLoading ? (
               <div className="flex justify-center py-8">
@@ -266,7 +263,7 @@ function CalendarPageContent() {
                       </h4>
                       <div className="mt-1 flex items-center space-x-2">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                          {task.status.replace('_', ' ')}
+                          {formatStatus(task.status)}
                         </span>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                           {task.priority}
@@ -287,7 +284,7 @@ function CalendarPageContent() {
                         )}
                       </div>
                     </div>
-                    
+
                     <Link
                       href={`/tasks/${task.id}`}
                       className="ml-4 text-primary-600 hover:text-primary-700 text-sm font-medium"

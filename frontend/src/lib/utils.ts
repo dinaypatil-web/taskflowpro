@@ -67,9 +67,15 @@ export function getPriorityColor(priority: string) {
   }
 }
 
+export function formatStatus(status?: string) {
+  if (!status) return 'Unknown';
+  return status.replace('_', ' ').replace('-', ' ');
+}
+
 export function getStatusColor(status: string) {
   if (!status) return 'text-gray-600 bg-gray-100';
-  switch (status.toLowerCase()) {
+  const s = status.toLowerCase();
+  switch (s) {
     case 'pending':
       return 'text-gray-600 bg-gray-100'
     case 'in_progress':
