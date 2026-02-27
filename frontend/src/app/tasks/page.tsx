@@ -41,7 +41,7 @@ function TasksPageContent() {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('')
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('')
 
-  const { data, isLoading } = useQuery(
+  const { data, isLoading, isError, error } = useQuery(
     ['tasks', searchTerm, statusFilter, priorityFilter],
     () => tasksApi.getTasks({
       search: searchTerm || undefined,
@@ -120,6 +120,23 @@ function TasksPageContent() {
             </div>
           </div>
         </div>
+
+        {/* Error State */}
+        {isError && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">
+                  Failed to load tasks: {(error as any)?.message || 'Unknown error'}.
+                  This is likely due to a missing database index. Check the browser console for a link to create it.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tasks List */}
         <div className="bg-white rounded-lg shadow-sm">

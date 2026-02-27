@@ -25,24 +25,24 @@ export default function DashboardPage() {
   }, [isAuthenticated, isLoading, router])
 
   // Fetch dashboard data
-  const { data: tasks, isLoading: tasksLoading } = useQuery(
+  const { data: tasks, isLoading: tasksLoading, isError: tasksHasError, error: tasksError } = useQuery(
     'dashboard-tasks',
     () => tasksApi.getTasks({ limit: 5, sortBy: 'updatedAt', sortOrder: 'desc' }),
     { enabled: isAuthenticated }
   )
 
-  const { data: taskStats, isLoading: statsLoading } = useQuery(
+  const { data: taskStats, isLoading: statsLoading, isError: statsHasError, error: statsError } = useQuery(
     'task-stats',
     () => tasksApi.getTaskStats(),
     { enabled: isAuthenticated }
   )
 
-  const { data: upcomingTasks, isLoading: upcomingLoading } = useQuery(
+  const { data: upcomingTasks, isLoading: upcomingLoading, isError: upcomingHasError, error: upcomingError } = useQuery(
     'upcoming-tasks',
     () => tasksApi.getUpcomingTasks(7),
     { enabled: isAuthenticated }
   )
-
+  Vinc
   if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center transition-colors duration-300">
@@ -93,17 +93,19 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Recent Tasks */}
           <div className="animate-fade-in-up animate-stagger-4">
-            <RecentTasks 
-              tasks={tasks?.tasks || []} 
-              isLoading={tasksLoading} 
+            <RecentTasks
+              tasks={tasks?.tasks || []}
+              isLoading={tasksLoading}
+              isError={tasksHasError}
+              error={tasksError}
             />
           </div>
 
           {/* Upcoming Tasks */}
           <div className="animate-fade-in-up animate-stagger-4">
-            <UpcomingTasks 
-              tasks={upcomingTasks || []} 
-              isLoading={upcomingLoading} 
+            <UpcomingTasks
+              tasks={upcomingTasks || []}
+              isLoading={upcomingLoading}
             />
           </div>
         </div>

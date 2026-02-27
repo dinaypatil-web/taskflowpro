@@ -9,9 +9,11 @@ import { ArrowRight, Clock, Sparkles } from 'lucide-react'
 interface RecentTasksProps {
   tasks: Task[]
   isLoading: boolean
+  isError?: boolean
+  error?: any
 }
 
-export function RecentTasks({ tasks, isLoading }: RecentTasksProps) {
+export function RecentTasks({ tasks, isLoading, isError, error }: RecentTasksProps) {
   return (
     <div className="glass-card">
       <div className="flex items-center justify-between mb-6">
@@ -44,6 +46,16 @@ export function RecentTasks({ tasks, isLoading }: RecentTasksProps) {
                 </div>
               </div>
             ))}
+          </div>
+        ) : isError ? (
+          <div className="text-center py-12 px-4">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-400 opacity-50 mb-4" />
+            <p className="text-sm text-red-600 font-medium whitespace-pre-wrap">
+              {error?.response?.data?.message || error?.message || 'Failed to load recent tasks'}
+            </p>
+            <p className="text-xs text-red-500 mt-2">
+              Check console for Firestore index link
+            </p>
           </div>
         ) : tasks.length === 0 ? (
           <div className="text-center py-12">
