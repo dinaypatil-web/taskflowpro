@@ -207,7 +207,7 @@ function StakeholdersPageContent() {
                             <div className="flex-shrink-0 h-10 w-10">
                               <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
                                 <span className="text-sm font-medium text-primary-600">
-                                  {stakeholder.firstName?.charAt(0).toUpperCase()}{stakeholder.lastName?.charAt(0).toUpperCase()}
+                                  {stakeholder.firstName?.charAt?.(0)?.toUpperCase()}{stakeholder.lastName?.charAt?.(0)?.toUpperCase()}
                                 </span>
                               </div>
                             </div>
@@ -301,7 +301,7 @@ function StakeholdersPageContent() {
                         <div className="flex-shrink-0">
                           <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
                             <span className="text-sm font-medium text-primary-600">
-                              {stakeholder.firstName?.charAt(0).toUpperCase()}{stakeholder.lastName?.charAt(0).toUpperCase()}
+                              {stakeholder.firstName?.charAt?.(0)?.toUpperCase()}{stakeholder.lastName?.charAt?.(0)?.toUpperCase()}
                             </span>
                           </div>
                         </div>
