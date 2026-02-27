@@ -62,8 +62,19 @@ async function bootstrap() {
 
   // CORS configuration — allow multiple origins for flexibility
   const frontendUrl = configService.get('FRONTEND_URL', 'http://localhost:3000');
+
   app.enableCors({
-    origin: [frontendUrl, 'http://localhost:3000'],
+    origin: (origin, callback) => {
+      const isLocalhost = !origin || origin.includes('localhost');
+      const isVercel = origin?.endsWith('.vercel.app');
+      const isAllowedOrigin = origin === frontendUrl;
+
+      if (isLocalhost || isVercel || isAllowedOrigin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
