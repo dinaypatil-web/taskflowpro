@@ -47,7 +47,11 @@ export default function NewTaskPage() {
   // Fetch stakeholders for the assignment picker
   const { data: stakeholdersData } = useQuery(
     'stakeholders',
-    () => stakeholdersApi.getStakeholders({ limit: 100 }),
+    () => stakeholdersApi.getStakeholders({
+      limit: 100,
+      sortBy: 'firstName',
+      sortOrder: 'asc'
+    }),
     { staleTime: 30000 }
   )
 
