@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { formatDueDate, getPriorityColor } from '@/lib/utils'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { Task } from '@/types/task'
-import { ArrowRight, Calendar, Users, Zap } from 'lucide-react'
+import { ArrowRight, Calendar, Users, Zap, AlertCircle } from 'lucide-react'
 
 interface UpcomingTasksProps {
   tasks: Task[]
