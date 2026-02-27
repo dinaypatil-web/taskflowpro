@@ -32,7 +32,7 @@ export class TasksService {
       updatedAt: now,
     };
 
-    await taskRef.set(task);
+    await this.firestore.setDoc('tasks', taskRef.id, task);
 
     if (stakeholderIds?.length) {
       const batch = this.firestore.getDb().batch();
@@ -66,7 +66,7 @@ export class TasksService {
       updatedAt: now,
     };
 
-    await taskRef.set(task);
+    await this.firestore.setDoc('tasks', taskRef.id, task);
 
     if (stakeholderIds?.length) {
       const batch = this.firestore.getDb().batch();

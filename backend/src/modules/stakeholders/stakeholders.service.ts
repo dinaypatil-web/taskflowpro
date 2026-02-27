@@ -31,7 +31,7 @@ export class StakeholdersService {
       deletedAt: null,
     };
 
-    await stakeholderRef.set(stakeholder);
+    await this.firestore.setDoc('stakeholders', stakeholderRef.id, stakeholder);
     return { id: stakeholderRef.id, ...stakeholder };
   }
 

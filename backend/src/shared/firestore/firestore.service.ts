@@ -31,7 +31,7 @@ export class FirestoreService implements OnModuleInit {
             admin.initializeApp({
                 credential: admin.credential.cert(parsedAccount),
             });
-            this.logger.log('Firebase initialized successfully with service account credentials.');
+            this.logger.log(`Firebase initialized successfully for project: ${parsedAccount.project_id}`);
         } catch (error) {
             const msg =
                 'Failed to parse FIREBASE_SERVICE_ACCOUNT JSON. ' +
@@ -55,9 +55,28 @@ export class FirestoreService implements OnModuleInit {
         return this.firestore.doc(docPath);
     }
 
-    // Helper for generating IDs similar to CUID or as a fallback
-    generateId(): string {
-        return this.firestore.collection('tmp').doc().id;
+    async setDoc(collectionPath: string, docId: string, data: any) {
+        this.logger.log(`Writing document to ${collectionPath}/${docId}`);
+        try {
+            const result = await this.firestore.collection(collectionPath).doc(docId).set(data);
+            this.logger.log(`Successfully wrote document to ${collectionPath}/${docId}`);
+            return result;
+        } catch (error) {
+            this.logger.error(`Failed to write document to ${collectionPath}/${docId}: ${error.message}`);
+            throw error;
+        }
+    }
+
+    async addDoc(collectionPath: string, data: any) {
+        this.logger.log(`Adding document to ${collectionPath}`);
+        try {
+            const result = await this.firestore.collection(collectionPath).add(data);
+            this.logger.log(`Successfully added document to ${collectionPath} with ID: ${result.id}`);
+            return result;
+        } catch (error) {
+            this.logger.error(`Failed to add document to ${collectionPath}: ${error.message}`);
+            throw error;
+        }
     }
 
     /**

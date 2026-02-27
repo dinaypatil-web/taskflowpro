@@ -68,7 +68,7 @@ export class AuthService {
       updatedAt: now,
     };
 
-    await userRef.set(newUser);
+    await this.firestore.setDoc('users', userRef.id, newUser);
 
     const user = {
       id: userRef.id,
