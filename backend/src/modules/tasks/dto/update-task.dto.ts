@@ -39,13 +39,13 @@ export class UpdateTaskDto {
   @IsDateString()
   dueDate?: string;
 
-  @ApiProperty({ 
-    example: ['stakeholder-id-1', 'stakeholder-id-2'], 
+  @ApiProperty({
+    example: ['stakeholder-id-1', 'stakeholder-id-2'],
     required: false,
     description: 'Array of stakeholder IDs to assign to this task'
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsString({ each: true })
   stakeholderIds?: string[];
 }
