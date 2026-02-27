@@ -105,6 +105,8 @@ export default function DashboardPage() {
             <UpcomingTasks
               tasks={upcomingTasks || []}
               isLoading={upcomingLoading}
+              isError={upcomingHasError}
+              error={upcomingError}
             />
           </div>
         </div>
