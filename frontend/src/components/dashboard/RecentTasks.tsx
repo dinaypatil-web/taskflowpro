@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { formatStatus, formatRelativeTime, getPriorityColor, getStatusColor } from '@/lib/utils'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { Task } from '@/types/task'
-import { ArrowRight, Clock, Sparkles } from 'lucide-react'
+import { ArrowRight, Clock, Sparkles, AlertCircle } from 'lucide-react'
 
 interface RecentTasksProps {
   tasks: Task[]
