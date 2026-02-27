@@ -36,11 +36,21 @@ export class HealthService {
   private async checkDatabase() {
     try {
       const start = Date.now();
-      await this.firestore.collection('health_check').limit(1).get();
-      return { status: 'ok', responseTime: Date.now() - start };
+      // Perform a real query to verify connectivity and permissions
+      const snapshot = await this.firestore.collection('users').limit(1).get();
+      return {
+        status: 'ok',
+        responseTime: Date.now() - start,
+        accessible: true,
+        userCount: snapshot.size
+      };
     } catch (error) {
       this.logger.warn(`Database health check failed: ${error.message}`);
-      return { status: 'error', error: error.message };
+      return {
+        status: 'error',
+        error: error.message,
+        accessible: false
+      };
     }
   }
 

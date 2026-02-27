@@ -44,7 +44,7 @@ function StakeholdersPageContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedOrganization, setSelectedOrganization] = useState('')
 
-  const { data, isLoading, refetch } = useQuery(
+  const { data, isLoading, isError, error, refetch } = useQuery(
     ['stakeholders', searchTerm, selectedOrganization],
     () => stakeholdersApi.getStakeholders({
       search: searchTerm || undefined,
@@ -121,11 +121,39 @@ function StakeholdersPageContent() {
           </div>
         </div>
 
+        {/* Error State */}
+        {isError && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <Trash2 className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">
+                  Error loading stakeholders: {(error as any)?.message || 'Unknown error'}.
+                  Please check your connection and ensure the API is reachable.
+                </p>
+                <button
+                  onClick={() => refetch()}
+                  className="mt-2 text-sm font-medium text-red-700 hover:text-red-600 underline"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stakeholders List */}
         <div className="bg-white rounded-lg shadow-sm">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <LoadingSpinner size="lg" />
+            </div>
+          ) : isError ? (
+            <div className="text-center py-12 px-4">
+              <Users className="mx-auto h-12 w-12 text-gray-400 opacity-20" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Failed to load data</h3>
             </div>
           ) : stakeholders.length === 0 ? (
             <div className="text-center py-12 px-4">

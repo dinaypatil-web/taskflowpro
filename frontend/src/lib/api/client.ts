@@ -4,6 +4,14 @@ import toast from 'react-hot-toast'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1'
 
+if (typeof window !== 'undefined') {
+  console.log('🌐 API Config:', {
+    baseUrl: API_URL,
+    env: process.env.NODE_ENV,
+    nextPublicUrl: process.env.NEXT_PUBLIC_API_URL
+  })
+}
+
 // Create axios instance
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -57,12 +65,18 @@ apiClient.interceptors.response.use(
     }
 
     // Handle other errors
-    if (error.response?.status === 403) {
+    const errorMessage = (error.response?.data as any)?.message || error.message
+
+    if (error.response?.status === 400) {
+      toast.error(`Bad Request (400): ${errorMessage}`, { duration: 10000 })
+    } else if (error.response?.status === 404) {
+      toast.error(`Resource not found (404). Check API URL: ${API_URL}`)
+    } else if (error.response?.status === 403) {
       toast.error('Access denied')
     } else if (error.response && error.response.status >= 500) {
-      toast.error('Server error. Please try again later.')
+      toast.error(`Server error: ${errorMessage}`)
     } else if (!error.response) {
-      toast.error('Network error. Please check your connection.')
+      toast.error(`Network error: ${errorMessage}. Check if backend is running.`)
     }
 
     return Promise.reject(error)
