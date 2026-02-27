@@ -137,9 +137,9 @@ export class TasksService {
         id: doc.id,
         ...taskData,
         taskStakeholders: stakeholders,
-        dueDate: taskData.dueDate?.toDate(),
-        createdAt: taskData.createdAt?.toDate(),
-        updatedAt: taskData.updatedAt?.toDate(),
+        dueDate: FirestoreService.safeToDate(taskData.dueDate),
+        createdAt: FirestoreService.safeToDate(taskData.createdAt),
+        updatedAt: FirestoreService.safeToDate(taskData.updatedAt),
       };
     }));
 
@@ -176,9 +176,9 @@ export class TasksService {
       taskStakeholders: stakeholders,
       reminders: remindersSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
       calendarEvents: calendarEventsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
-      dueDate: taskData.dueDate?.toDate(),
-      createdAt: taskData.createdAt?.toDate(),
-      updatedAt: taskData.updatedAt?.toDate(),
+      dueDate: FirestoreService.safeToDate(taskData.dueDate),
+      createdAt: FirestoreService.safeToDate(taskData.createdAt),
+      updatedAt: FirestoreService.safeToDate(taskData.updatedAt),
     };
   }
 

@@ -59,4 +59,30 @@ export class FirestoreService implements OnModuleInit {
     generateId(): string {
         return this.firestore.collection('tmp').doc().id;
     }
+
+    /**
+     * Safely converts a Firestore value (Timestamp, string, or Date) to a JS Date.
+     * Returns null if the value is null, undefined, or invalid.
+     */
+    static safeToDate(value: any): Date | null {
+        if (!value) return null;
+
+        // Firestore Timestamp
+        if (typeof value.toDate === 'function') {
+            return value.toDate();
+        }
+
+        // ISO String or other date string
+        if (typeof value === 'string') {
+            const date = new Date(value);
+            return isNaN(date.getTime()) ? null : date;
+        }
+
+        // Already a Date object
+        if (value instanceof Date) {
+            return value;
+        }
+
+        return null;
+    }
 }

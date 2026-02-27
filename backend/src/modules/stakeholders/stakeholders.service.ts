@@ -100,8 +100,8 @@ export class StakeholdersService {
         id: doc.id,
         ...data,
         _count: { taskStakeholders: taskCountSnapshot.data().count },
-        createdAt: data.createdAt?.toDate(),
-        updatedAt: data.updatedAt?.toDate(),
+        createdAt: FirestoreService.safeToDate(data.createdAt),
+        updatedAt: FirestoreService.safeToDate(data.updatedAt),
       };
     }));
 
@@ -145,8 +145,8 @@ export class StakeholdersService {
       ...stakeholderData,
       taskStakeholders: tasks.filter(Boolean).map(t => ({ task: t })),
       reminderLogs: reminderLogsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
-      createdAt: stakeholderData.createdAt?.toDate(),
-      updatedAt: stakeholderData.updatedAt?.toDate(),
+      createdAt: FirestoreService.safeToDate(stakeholderData.createdAt),
+      updatedAt: FirestoreService.safeToDate(stakeholderData.updatedAt),
     };
   }
 
