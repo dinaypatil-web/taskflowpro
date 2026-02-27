@@ -91,7 +91,6 @@ export default function DashboardPage() {
             error={statsError}
           />
         </div>
-        Vinc
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Recent Tasks */}
