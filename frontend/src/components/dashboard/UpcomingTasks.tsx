@@ -9,9 +9,11 @@ import { ArrowRight, Calendar, Users, Zap } from 'lucide-react'
 interface UpcomingTasksProps {
   tasks: Task[]
   isLoading: boolean
+  isError?: boolean
+  error?: any
 }
 
-export function UpcomingTasks({ tasks, isLoading }: UpcomingTasksProps) {
+export function UpcomingTasks({ tasks, isLoading, isError, error }: UpcomingTasksProps) {
   return (
     <div className="glass-card">
       <div className="flex items-center justify-between mb-6">
@@ -27,7 +29,7 @@ export function UpcomingTasks({ tasks, isLoading }: UpcomingTasksProps) {
           <Calendar className="ml-1 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
         </Link>
       </div>
-      
+
       <div>
         {isLoading ? (
           <div className="space-y-4">
@@ -44,6 +46,13 @@ export function UpcomingTasks({ tasks, isLoading }: UpcomingTasksProps) {
                 </div>
               </div>
             ))}
+          </div>
+        ) : isError ? (
+          <div className="text-center py-12 px-4">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-400 opacity-50 mb-4" />
+            <p className="text-sm text-red-600 font-medium whitespace-pre-wrap">
+              {error?.response?.data?.message || error?.message || 'Failed to load upcoming tasks'}
+            </p>
           </div>
         ) : tasks.length === 0 ? (
           <div className="text-center py-12">
