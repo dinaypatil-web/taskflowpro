@@ -42,7 +42,6 @@ export default function DashboardPage() {
     () => tasksApi.getUpcomingTasks(7),
     { enabled: isAuthenticated }
   )
-  Vinc
   if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center transition-colors duration-300">
