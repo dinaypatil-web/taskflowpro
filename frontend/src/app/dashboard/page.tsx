@@ -83,11 +83,15 @@ export default function DashboardPage() {
           <QuickActions />
         </div>
 
-        {/* Task Statistics */}
         <div className="animate-fade-in-up animate-stagger-3">
-          <TaskStats stats={taskStats} isLoading={statsLoading} />
+          <TaskStats
+            stats={taskStats}
+            isLoading={statsLoading}
+            isError={statsHasError}
+            error={statsError}
+          />
         </div>
-
+        Vinc
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Recent Tasks */}

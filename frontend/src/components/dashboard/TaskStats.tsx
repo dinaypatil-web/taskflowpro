@@ -6,9 +6,29 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 interface TaskStatsProps {
   stats?: Record<string, number>
   isLoading: boolean
+  isError?: boolean
+  error?: any
 }
 
-export function TaskStats({ stats, isLoading }: TaskStatsProps) {
+export function TaskStats({ stats, isLoading, isError, error }: TaskStatsProps) {
+  if (isError) {
+    return (
+      <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg mb-6">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <AlertCircle className="h-5 w-5 text-red-400" />
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-red-700 font-medium">
+              Failed to load task statistics: {(error as any)?.response?.data?.message || error?.message || 'Unknown error'}.
+              This is usually a database index error.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -76,28 +96,27 @@ export function TaskStats({ stats, isLoading }: TaskStatsProps) {
         <TrendingUp className="w-5 h-5 text-green-500" />
         <h2 className="text-xl font-bold text-gradient-primary">Task Overview</h2>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
-          <div 
-            key={stat.name} 
+          <div
+            key={stat.name}
             className={`glass-card hover-lift group animate-fade-in-up animate-stagger-${Math.min(index + 1, 4)}`}
           >
             <div className="flex items-center justify-between mb-4">
               <div className={`p-3 rounded-xl ${stat.iconBg} group-hover:scale-110 transition-transform duration-300`}>
                 <stat.icon className={`h-6 w-6 bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`} />
               </div>
-              <div className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                stat.changeType === 'positive' 
-                  ? 'bg-green-100 text-green-700' 
+              <div className={`text-xs font-semibold px-2 py-1 rounded-full ${stat.changeType === 'positive'
+                  ? 'bg-green-100 text-green-700'
                   : stat.changeType === 'rate'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-red-100 text-red-700'
-              }`}>
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-red-100 text-red-700'
+                }`}>
                 {stat.change}
               </div>
             </div>
-            
+
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
               <p className={`text-3xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}>
@@ -113,7 +132,7 @@ export function TaskStats({ stats, isLoading }: TaskStatsProps) {
                   <span>{completionRate}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
+                  <div
                     className={`h-2 rounded-full bg-gradient-to-r ${stat.gradient} transition-all duration-1000 ease-out`}
                     style={{ width: `${completionRate}%` }}
                   />

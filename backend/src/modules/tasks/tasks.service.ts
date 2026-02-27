@@ -22,6 +22,7 @@ export class TasksService {
     const now = new Date();
 
     const taskRef = this.tasksCollection.doc();
+    console.log(`[TasksService] Creating task ${taskRef.id} for user ${userId}`);
     const task = {
       ...taskData,
       userId,
@@ -98,6 +99,7 @@ export class TasksService {
       dueDateTo,
     } = query;
 
+    console.log(`[TasksService] Finding tasks for user ${userId}. Query:`, query);
     let firestoreQuery: any = this.tasksCollection
       .where('userId', '==', userId)
       .where('isDeleted', '==', false);
@@ -307,14 +309,22 @@ export class TasksService {
   }
 
   private async getTaskStakeholders(taskId: string) {
-    const snapshot = await this.taskStakeholdersCollection.where('taskId', '==', taskId).get();
-    return Promise.all(snapshot.docs.map(async (doc) => {
-      const mapping = doc.data();
-      const stakeholderDoc = await this.firestore.collection('stakeholders').doc(mapping.stakeholderId).get();
-      return {
-        ...mapping,
-        stakeholder: stakeholderDoc.exists ? { id: stakeholderDoc.id, ...stakeholderDoc.data() } : null,
-      };
-    }));
+    try {
+      const snapshot = await this.taskStakeholdersCollection.where('taskId', '==', taskId).get();
+      return Promise.all(snapshot.docs.map(async (doc) => {
+        const mapping = doc.data();
+        if (!mapping.stakeholderId) {
+          return { ...mapping, stakeholder: null };
+        }
+        const stakeholderDoc = await this.firestore.collection('stakeholders').doc(mapping.stakeholderId).get();
+        return {
+          ...mapping,
+          stakeholder: stakeholderDoc.exists ? { id: stakeholderDoc.id, ...stakeholderDoc.data() } : null,
+        };
+      }));
+    } catch (error) {
+      console.error(`Error fetching stakeholders for task ${taskId}:`, error);
+      return [];
+    }
   }
 }
