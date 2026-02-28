@@ -21,10 +21,14 @@ import {
   Clock,
   AlertCircle,
   Calendar,
-  User
+  User,
+  Edit,
+  Trash2
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatStatus, formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
+import { useMutation, useQueryClient } from 'react-query'
+import toast from 'react-hot-toast'
 
 export default function TasksPage() {
   return (
@@ -40,6 +44,28 @@ function TasksPageContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('')
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('')
+  const queryClient = useQueryClient()
+
+  const deleteMutation = useMutation(
+    (id: string) => tasksApi.deleteTask(id),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('tasks')
+        toast.success('Task deleted')
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || 'Failed to delete task')
+      }
+    }
+  )
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (confirm('Are you sure you want to delete this task?')) {
+      deleteMutation.mutate(id)
+    }
+  }
 
   const { data, isLoading, isError, error } = useQuery(
     ['tasks', searchTerm, statusFilter, priorityFilter],
@@ -209,13 +235,29 @@ function TasksPageContent() {
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0">
+                    <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 shrink-0">
                       <Link
                         href={`/tasks/${task.id}`}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 w-full sm:w-auto justify-center"
+                        className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 flex-1 sm:flex-none justify-center"
                       >
                         View
                       </Link>
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Link
+                          href={`/tasks/${task.id}/edit`}
+                          className="p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors border border-primary-100 sm:border-transparent"
+                          title="Edit Task"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                        <button
+                          onClick={(e) => handleDelete(e, task.id)}
+                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-red-100 sm:border-transparent"
+                          title="Delete Task"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

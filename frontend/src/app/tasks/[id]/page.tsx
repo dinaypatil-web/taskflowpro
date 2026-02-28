@@ -15,7 +15,10 @@ import {
     Trash2,
     CheckCircle,
     AlertCircle,
-    ChevronRight
+    ChevronRight,
+    Phone,
+    MessageSquare,
+    ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatStatus, getPriorityColor, getStatusColor } from '@/lib/utils'
@@ -231,7 +234,31 @@ function TaskDetailsContent({ id }: { id: string }) {
                                                 {ts.stakeholder.email || ts.stakeholder.organization || 'Stakeholder'}
                                             </p>
                                         </div>
-                                        <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary-500 transform group-hover:translate-x-1 transition-all" />
+                                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                                            {ts.stakeholder.phone && (
+                                                <>
+                                                    <a
+                                                        href={`tel:${ts.stakeholder.phone.replace(/\s+/g, '')}`}
+                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-100"
+                                                        title="Call Stakeholder"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <Phone className="h-4 w-4" />
+                                                    </a>
+                                                    <a
+                                                        href={`https://wa.me/${ts.stakeholder.phone.replace(/[^0-9]/g, '')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors border border-primary-100"
+                                                        title="WhatsApp Stakeholder"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <MessageSquare className="h-4 w-4" />
+                                                    </a>
+                                                </>
+                                            )}
+                                            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary-500 transform group-hover:translate-x-1 transition-all" />
+                                        </div>
                                     </Link>
                                 ))}
                             </div>
