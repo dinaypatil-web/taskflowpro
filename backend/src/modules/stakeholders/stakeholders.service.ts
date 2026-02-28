@@ -40,22 +40,59 @@ export class StakeholdersService {
     const now = new Date();
     const results = [];
 
-    stakeholders.forEach((dto) => {
-      const { tags, ...stakeholderData } = dto;
-      const docRef = this.stakeholdersCollection.doc();
-      const stakeholder = {
-        ...stakeholderData,
-        userId,
-        tags: tags || [],
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      };
+    // To handle de-duplication, we first fetch existing contacts for this user
+    const existingSnapshot = await this.stakeholdersCollection
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .get();
 
-      batch.set(docRef, stakeholder);
-      results.push({ id: docRef.id, ...stakeholder });
+    const existingEmails = new Map();
+    const existingPhones = new Map();
+
+    existingSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.email) existingEmails.set(data.email.toLowerCase(), doc.id);
+      if (data.phone) existingPhones.set(data.phone.replace(/\s/g, ''), doc.id);
     });
+
+    for (const dto of stakeholders) {
+      const { tags, ...stakeholderData } = dto;
+      const normalizedEmail = stakeholderData.email?.toLowerCase();
+      const normalizedPhone = stakeholderData.phone?.replace(/\s/g, '');
+
+      let existingId = null;
+      if (normalizedEmail && existingEmails.has(normalizedEmail)) {
+        existingId = existingEmails.get(normalizedEmail);
+      } else if (normalizedPhone && existingPhones.has(normalizedPhone)) {
+        existingId = existingPhones.get(normalizedPhone);
+      }
+
+      if (existingId) {
+        // Update existing record instead of creating new
+        const docRef = this.stakeholdersCollection.doc(existingId);
+        const update = {
+          ...stakeholderData,
+          updatedAt: now,
+          tags: Array.from(new Set([...(existingSnapshot.docs.find(d => d.id === existingId)?.data().tags || []), ...(tags || [])]))
+        };
+        batch.update(docRef, update);
+        results.push({ id: existingId, ...update, _isUpdate: true });
+      } else {
+        // Create new record
+        const docRef = this.stakeholdersCollection.doc();
+        const stakeholder = {
+          ...stakeholderData,
+          userId,
+          tags: tags || [],
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+          deletedAt: null,
+        };
+        batch.set(docRef, stakeholder);
+        results.push({ id: docRef.id, ...stakeholder, _isUpdate: false });
+      }
+    }
 
     await batch.commit();
     return results;

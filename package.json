@@ -11,7 +11,7 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run dev -w frontend",
     "dev:backend": "npm run start:dev -w backend",
-    "build": "npm run build -w backend && npm run build -w frontend",
+    "build": "npm run deploy:indexes && npm run build:backend && npm run build:frontend",
     "build:frontend": "npm run build -w frontend",
     "build:backend": "npm run build -w backend",
     "docker:up": "docker-compose up -d",
@@ -19,10 +19,12 @@
     "docker:build": "docker-compose build",
     "test": "npm test -w backend && npm test -w frontend",
     "test:frontend": "npm test -w frontend",
-    "test:backend": "npm test -w backend"
+    "test:backend": "npm test -w backend",
+    "deploy:indexes": "firebase deploy --only firestore:indexes --non-interactive"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "firebase-tools": "^13.0.0"
   },
   "engines": {
     "node": ">=18.0.0",

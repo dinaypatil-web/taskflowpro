@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-02-28T16:48:00.425Z",
+  "userId": "cLhsidbqXoSIjZeKHD87",
+  "totalTasksInCollection": 4,
+  "tasksForUser": [
+    {
+      "id": "NXIRZRHGAZdbWawB6roL",
+      "title": "Test Task 2",
+      "userId": "cLhsidbqXoSIjZeKHD87",
+      "isDeleted": false,
+      "createdAt": "2026-02-27T20:35:24.971Z",
+      "allKeys": [
+        "title",
+        "description",
+        "priority",
+        "dueDate",
+        "userId",
+        "isVoiceCreated",
+        "voiceMetadata",
+        "isDeleted",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    {
+      "id": "X0siCIVIwNl4z2D9kQLt",
+      "title": "Test task",
+      "userId": "cLhsidbqXoSIjZeKHD87",
+      "isDeleted": false,
+      "createdAt": "2026-02-28T03:33:51.803Z",
+      "allKeys": [
+        "title",
+        "priority",
+        "dueDate",
+        "userId",
+        "isVoiceCreated",
+        "voiceMetadata",
+        "isDeleted",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    {
+      "id": "XVxpFulD8E9n8hwsEIAb",
+      "title": "Test Task 2",
+      "userId": "cLhsidbqXoSIjZeKHD87",
+      "isDeleted": false,
+      "createdAt": "2026-02-27T20:35:39.622Z",
+      "allKeys": [
+        "title",
+        "description",
+        "priority",
+        "dueDate",
+        "userId",
+        "isVoiceCreated",
+        "voiceMetadata",
+        "isDeleted",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    {
+      "id": "YyL2Y7D9Yzog6e38MOGf",
+      "title": "Test Task",
+      "userId": "cLhsidbqXoSIjZeKHD87",
+      "isDeleted": false,
+      "createdAt": "2026-02-26T19:06:44.550Z",
+      "allKeys": [
+        "title",
+        "description",
+        "priority",
+        "dueDate",
+        "userId",
+        "isVoiceCreated",
+        "voiceMetadata",
+        "isDeleted",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  ],
+  "tasksMissingIsDeleted": [],
+  "tasksWithIsDeletedTrue": [],
+  "errors": []
+}
