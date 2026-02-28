@@ -212,9 +212,12 @@ function StakeholdersPageContent() {
                               </div>
                             </div>
                             <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
+                              <Link
+                                href={`/stakeholders/${stakeholder.id}`}
+                                className="text-sm font-medium text-gray-900 hover:text-primary-600 transition-colors"
+                              >
                                 {stakeholder.firstName} {stakeholder.lastName}
-                              </div>
+                              </Link>
                             </div>
                           </div>
                         </td>
@@ -306,9 +309,12 @@ function StakeholdersPageContent() {
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                          <Link
+                            href={`/stakeholders/${stakeholder.id}`}
+                            className="text-sm font-medium text-gray-900 truncate hover:text-primary-600 transition-colors"
+                          >
                             {stakeholder.firstName} {stakeholder.lastName}
-                          </h3>
+                          </Link>
                           <div className="mt-1 space-y-1">
                             {stakeholder.email && (
                               <div className="flex items-center text-xs text-gray-600">

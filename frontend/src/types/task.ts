@@ -51,6 +51,16 @@ export interface Stakeholder {
   createdAt: string
   updatedAt: string
   deletedAt?: string
+  taskStakeholders?: {
+    task: {
+      id: string;
+      title: string;
+      status: TaskStatus;
+      priority: Priority;
+      dueDate?: string;
+    }
+  }[]
+  reminderLogs?: any[]
 }
 
 export interface CreateTaskRequest {
