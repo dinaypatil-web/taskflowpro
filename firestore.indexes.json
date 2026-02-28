@@ -59,6 +59,42 @@
             ]
         },
         {
+            "collectionGroup": "tasks",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "isDeleted",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "dueDate",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "tasks",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "isDeleted",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "dueDate",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
             "collectionGroup": "stakeholders",
             "queryScope": "COLLECTION",
             "fields": [
