@@ -37,30 +37,34 @@ export class CalendarService {
       firestoreQuery = firestoreQuery.where('taskId', '==', taskId);
     }
 
-    // Firestore date filtering is limited for multiple fields. 
-    // We'll filter by startDate and then refine if needed.
-    if (startDate) {
-      firestoreQuery = firestoreQuery.where('startDate', '>=', new Date(startDate));
-    }
+    // To find overlapping events (startDate <= queryEndDate AND endDate >= queryStartDate)
+    // Firestore only allows one inequality filter on different fields.
+    // We'll query by startDate and filter endDate in memory.
     if (endDate) {
       firestoreQuery = firestoreQuery.where('startDate', '<=', new Date(endDate));
     }
 
     const snapshot = await firestoreQuery.orderBy('startDate', 'asc').get();
 
-    return Promise.all(snapshot.docs.map(async (doc) => {
-      const data = doc.data();
-      const taskDoc = data.taskId ? await this.firestore.collection('tasks').doc(data.taskId).get() : null;
-      return {
-        id: doc.id,
-        ...data,
-        task: taskDoc?.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
-        startDate: data.startDate?.toDate(),
-        endDate: data.endDate?.toDate(),
-        createdAt: data.createdAt?.toDate(),
-        updatedAt: data.updatedAt?.toDate(),
-      };
-    }));
+    return Promise.all(snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(data => {
+        // In-memory filter for the second half of the overlap: endDate >= queryStartDate
+        if (!startDate) return true;
+        const eventEndDate = data.endDate?.toDate() || data.startDate?.toDate();
+        return eventEndDate >= new Date(startDate);
+      })
+      .map(async (data) => {
+        const taskDoc = data.taskId ? await this.firestore.collection('tasks').doc(data.taskId).get() : null;
+        return {
+          ...data,
+          task: taskDoc?.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
+          startDate: data.startDate?.toDate(),
+          endDate: data.endDate?.toDate(),
+          createdAt: data.createdAt?.toDate(),
+          updatedAt: data.updatedAt?.toDate(),
+        };
+      }));
   }
 
   async findOne(userId: string, id: string) {
@@ -177,30 +181,33 @@ export class CalendarService {
     }
 
     const task = taskDoc.data();
+    const taskStartDate = task.startDate || task.createdAt;
+    const taskEndDate = task.completedAt || task.dueDate || taskStartDate;
+
     const existingEvents = await this.eventsCollection.where('taskId', '==', taskId).where('userId', '==', userId).limit(1).get();
+
+    const eventData = {
+      userId,
+      taskId,
+      title: task.title,
+      description: task.description,
+      startDate: taskStartDate,
+      endDate: taskEndDate,
+      status: task.status,
+      dueDate: task.dueDate,
+      isAllDay: true,
+      updatedAt: new Date(),
+    };
 
     if (!existingEvents.empty) {
       const eventRef = existingEvents.docs[0].ref;
-      await eventRef.update({
-        title: task.title,
-        description: task.description,
-        startDate: task.dueDate,
-        endDate: task.dueDate,
-        updatedAt: new Date(),
-      });
+      await eventRef.update(eventData);
       return this.findOne(userId, eventRef.id);
     } else {
       const eventRef = this.eventsCollection.doc();
       await eventRef.set({
-        userId,
-        taskId,
-        title: task.title,
-        description: task.description,
-        startDate: task.dueDate,
-        endDate: task.dueDate,
-        isAllDay: true,
+        ...eventData,
         createdAt: new Date(),
-        updatedAt: new Date(),
       });
       return this.findOne(userId, eventRef.id);
     }

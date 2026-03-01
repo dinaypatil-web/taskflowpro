@@ -45,7 +45,8 @@ export class TasksService {
 
     await this.firestore.setDoc('tasks', taskRef.id, task);
 
-    if (task.dueDate) {
+    // Sync to calendar if it has dates
+    if (task.startDate || task.dueDate) {
       await this.calendar.syncTaskToCalendar(userId, taskRef.id);
     }
 
@@ -85,7 +86,7 @@ export class TasksService {
 
     await this.firestore.setDoc('tasks', taskRef.id, task);
 
-    if (task.dueDate) {
+    if (task.startDate || task.dueDate) {
       await this.calendar.syncTaskToCalendar(userId, taskRef.id);
     }
 
@@ -234,7 +235,8 @@ export class TasksService {
 
     await taskRef.update(updatePayload);
 
-    if (updatePayload.dueDate) {
+    // Sync to calendar if dates or status changed
+    if (updatePayload.startDate || updatePayload.dueDate || updatePayload.status) {
       await this.calendar.syncTaskToCalendar(userId, id);
     }
 
