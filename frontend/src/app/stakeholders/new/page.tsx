@@ -76,20 +76,25 @@ export default function NewStakeholderPage() {
 
   const handleContactSelect = (contact: ParsedContact) => {
     // Populate form with contact data
-    setValue('firstName', contact.firstName)
-    setValue('lastName', contact.lastName)
-    if (contact.email) {
-      reset({
-        ...stakeholderSchema.parse({
-          firstName: contact.firstName,
-          lastName: contact.lastName,
-          emails: [{ value: contact.email }],
-          phones: contact.phone ? [{ value: contact.phone }] : [{ value: '' }],
-          organization: contact.organization || '',
-          tags: tags,
-        }),
-      })
-    }
+    const emailValues = contact.emails?.length
+      ? contact.emails.map(email => ({ value: email }))
+      : [{ value: '' }]
+
+    const phoneValues = contact.phones?.length
+      ? contact.phones.map(phone => ({ value: phone }))
+      : [{ value: '' }]
+
+    reset({
+      ...stakeholderSchema.parse({
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        emails: emailValues,
+        phones: phoneValues,
+        organization: contact.organization || '',
+        tags: tags,
+      }),
+    })
+
     if (contact.organization) setValue('organization', contact.organization)
 
     setShowContactPicker(false)
