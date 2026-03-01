@@ -61,7 +61,7 @@ function CalendarPageContent() {
       const start = new Date()
       const end = new Date()
       end.setDate(start.getDate() + 30) // Next 30 days
-      return calendarApi.findEvents({
+      return calendarApi.getEvents({
         startDate: start.toISOString(),
         endDate: end.toISOString()
       })
