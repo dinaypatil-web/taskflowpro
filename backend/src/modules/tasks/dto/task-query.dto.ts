@@ -23,7 +23,7 @@ export class TaskQueryDto {
   @Transform(({ value }) => parseInt(value))
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(1000)
   limit?: number = 10;
 
   @ApiProperty({ example: 'PENDING', required: false })
@@ -41,8 +41,8 @@ export class TaskQueryDto {
   @IsString()
   search?: string;
 
-  @ApiProperty({ 
-    required: false, 
+  @ApiProperty({
+    required: false,
     default: 'createdAt',
     enum: ['createdAt', 'updatedAt', 'dueDate', 'title', 'priority', 'status']
   })
@@ -50,8 +50,8 @@ export class TaskQueryDto {
   @IsString()
   sortBy?: string = 'createdAt';
 
-  @ApiProperty({ 
-    required: false, 
+  @ApiProperty({
+    required: false,
     default: 'desc',
     enum: ['asc', 'desc']
   })

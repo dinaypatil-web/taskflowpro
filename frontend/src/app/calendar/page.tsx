@@ -40,14 +40,18 @@ function CalendarPageContent() {
 
   const { data: tasks, isLoading } = useQuery(
     ['calendar-tasks', currentDate.getMonth(), currentDate.getFullYear()],
-    () => tasksApi.getTasks({
-      // Fetch a wider range to handle tasks that start before and end after the current month
-      dueDateFrom: `${currentDate.getFullYear()}-${String(currentDate.getMonth()).padStart(2, '0')}-01`,
-      dueDateTo: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 2).padStart(2, '0')}-31`,
-      limit: 1000,
-      sortBy: 'dueDate',
-      sortOrder: 'asc'
-    }),
+    () => {
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0); // Last day of next month
+
+      return tasksApi.getTasks({
+        dueDateFrom: start.toISOString().split('T')[0],
+        dueDateTo: end.toISOString().split('T')[0],
+        limit: 1000,
+        sortBy: 'dueDate',
+        sortOrder: 'asc'
+      });
+    },
     { enabled: isAuthenticated }
   )
 
@@ -241,8 +245,8 @@ function CalendarPageContent() {
                             key={task.id}
                             href={`/tasks/${task.id}`}
                             className={`block p-1 rounded text-[10px] sm:text-xs truncate transition-all border ${delayed
-                                ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                                : `${getPriorityColor(task.priority)} border-transparent hover:opacity-80`
+                              ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                              : `${getPriorityColor(task.priority)} border-transparent hover:opacity-80`
                               }`}
                           >
                             <div className="flex items-center">
