@@ -6,16 +6,29 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function isValidDate(date: any): date is Date {
+  const d = date instanceof Date ? date : new Date(date);
+  return !isNaN(d.getTime());
+}
+
 export function formatDate(date: string | Date, formatStr: string = 'MMM dd, yyyy') {
-  return format(new Date(date), formatStr)
+  if (!date) return 'N/A'
+  const dateObj = new Date(date)
+  if (isNaN(dateObj.getTime())) return 'Invalid Date'
+  return format(dateObj, formatStr)
 }
 
 export function formatDateTime(date: string | Date) {
-  return format(new Date(date), 'MMM dd, yyyy HH:mm')
+  if (!date) return 'N/A'
+  const dateObj = new Date(date)
+  if (isNaN(dateObj.getTime())) return 'Invalid Date'
+  return format(dateObj, 'MMM dd, yyyy HH:mm')
 }
 
 export function formatRelativeTime(date: string | Date) {
+  if (!date) return 'N/A'
   const dateObj = new Date(date)
+  if (isNaN(dateObj.getTime())) return 'Invalid Date'
 
   if (isToday(dateObj)) {
     return `Today at ${format(dateObj, 'HH:mm')}`
@@ -33,11 +46,13 @@ export function formatRelativeTime(date: string | Date) {
 }
 
 export function formatDueDate(date: string | Date) {
+  if (!date) return 'N/A'
   const dateObj = new Date(date)
+  if (isNaN(dateObj.getTime())) return 'Invalid Date'
   const now = new Date()
 
   if (dateObj < now) {
-    return `Overdue (${formatRelativeTime(date)})`
+    return `Overdue (${formatRelativeTime(dateObj)})`
   }
 
   if (isToday(dateObj)) {
@@ -48,7 +63,7 @@ export function formatDueDate(date: string | Date) {
     return `Due tomorrow at ${format(dateObj, 'HH:mm')}`
   }
 
-  return `Due ${formatRelativeTime(date)}`
+  return `Due ${formatRelativeTime(dateObj)}`
 }
 
 export function getPriorityColor(priority: string) {

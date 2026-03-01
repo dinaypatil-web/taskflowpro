@@ -24,7 +24,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
-import { formatStatus, formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
+import { formatStatus, formatDate, getPriorityColor, getStatusColor, isValidDate } from '@/lib/utils'
 
 export default function CalendarPage() {
   return (
@@ -130,12 +130,19 @@ function CalendarPageContent() {
     // monthData.events is currently a Record<string, any[]> indexed by startDate.
     // We need to iterate all events and check if the date falls in range.
     Object.values(monthData.events).flat().forEach((event: any) => {
+      if (!isValidDate(event.startDate)) return;
+
       const start = new Date(event.startDate).toISOString().split('T')[0]
 
       // Calculate visual end date for tracker
-      let end = new Date(event.endDate || event.startDate).toISOString().split('T')[0]
+      const endDateVal = event.endDate || event.startDate
+      if (!isValidDate(endDateVal)) return;
+
+      let end = new Date(endDateVal).toISOString().split('T')[0]
       const today = new Date().toISOString().split('T')[0]
-      const dueDate = event.dueDate ? new Date(event.dueDate).toISOString().split('T')[0] : null
+      const dueDate = event.dueDate && isValidDate(event.dueDate)
+        ? new Date(event.dueDate).toISOString().split('T')[0]
+        : null
 
       if (event.status !== 'COMPLETED' && dueDate && today > dueDate) {
         // Extend to today if overdue and not completed
@@ -327,9 +334,17 @@ function CalendarPageContent() {
                         const id = event.taskId || event.id
 
                         const dateStr = day.toISOString().split('T')[0]
+
+                        if (!isValidDate(event.startDate)) return null;
                         const startStr = new Date(event.startDate).toISOString().split('T')[0]
-                        const endStr = new Date(event.endDate || event.startDate).toISOString().split('T')[0]
-                        const dueDateStr = event.dueDate ? new Date(event.dueDate).toISOString().split('T')[0] : null
+
+                        const endDateVal = event.endDate || event.startDate
+                        if (!isValidDate(endDateVal)) return null;
+                        const endStr = new Date(endDateVal).toISOString().split('T')[0]
+
+                        const dueDateStr = event.dueDate && isValidDate(event.dueDate)
+                          ? new Date(event.dueDate).toISOString().split('T')[0]
+                          : null
                         const todayStr = new Date().toISOString().split('T')[0]
 
                         const isDelayed = event.status !== 'COMPLETED' && dueDateStr && dateStr > dueDateStr

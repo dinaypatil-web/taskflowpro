@@ -53,13 +53,18 @@ async function syncAllTasks() {
             .limit(1)
             .get();
 
+        const taskStartDate = task.startDate ? (typeof task.startDate.toDate === 'function' ? task.startDate.toDate() : new Date(task.startDate)) : (typeof task.createdAt.toDate === 'function' ? task.createdAt.toDate() : new Date(task.createdAt));
+        const taskEndDate = task.completedAt ? (typeof task.completedAt.toDate === 'function' ? task.completedAt.toDate() : new Date(task.completedAt)) : (task.dueDate ? (typeof task.dueDate.toDate === 'function' ? task.dueDate.toDate() : new Date(task.dueDate)) : taskStartDate);
+
         const eventData = {
             userId,
             taskId,
             title: task.title,
             description: task.description || '',
-            startDate: admin.firestore.Timestamp.fromDate(dueDate),
-            endDate: admin.firestore.Timestamp.fromDate(dueDate),
+            startDate: admin.firestore.Timestamp.fromDate(taskStartDate),
+            endDate: admin.firestore.Timestamp.fromDate(taskEndDate),
+            status: task.status,
+            dueDate: task.dueDate ? admin.firestore.Timestamp.fromDate(dueDate) : null,
             isAllDay: true,
             updatedAt: admin.firestore.Timestamp.now(),
         };

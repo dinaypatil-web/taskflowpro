@@ -14,7 +14,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ArrowLeft, Check, X, Calendar, Flag, Users, FileText, Upload, Paperclip, File, Image as ImageIcon, FileText as FileTextIcon, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { getPriorityColor, getStatusColor, formatStatus } from '@/lib/utils'
+import { getPriorityColor, getStatusColor, formatStatus, isValidDate } from '@/lib/utils'
 
 const taskSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -74,8 +74,8 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
                 description: task.description || '',
                 priority: task.priority,
                 status: task.status,
-                startDate: task.startDate ? new Date(task.startDate).toISOString().slice(0, 16) : '',
-                dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
+                startDate: task.startDate && isValidDate(task.startDate) ? new Date(task.startDate).toISOString().slice(0, 16) : '',
+                dueDate: task.dueDate && isValidDate(task.dueDate) ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
             })
         }
     }, [task, reset])
@@ -114,8 +114,8 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
         updateMutation.mutate({
             ...data,
             description: data.description || undefined,
-            startDate: data.startDate ? new Date(data.startDate).toISOString() : undefined,
-            dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+            startDate: data.startDate && isValidDate(data.startDate) ? new Date(data.startDate).toISOString() : undefined,
+            dueDate: data.dueDate && isValidDate(data.dueDate) ? new Date(data.dueDate).toISOString() : undefined,
             stakeholderIds: selectedStakeholderIds,
             attachments: attachments,
         })

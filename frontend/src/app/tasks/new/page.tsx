@@ -14,7 +14,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ArrowLeft, Plus, X, Calendar, Flag, Users, FileText, Upload, Paperclip, File, Image as ImageIcon, FileText as FileTextIcon } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { getPriorityColor } from '@/lib/utils'
+import { getPriorityColor, isValidDate } from '@/lib/utils'
 import { QuickCreateStakeholder } from '@/components/stakeholders/QuickCreateStakeholder'
 import { Stakeholder } from '@/types/task'
 
@@ -92,8 +92,8 @@ function NewTaskPageContent() {
     createMutation.mutate({
       ...data,
       description: data.description || undefined,
-      startDate: data.startDate ? new Date(data.startDate).toISOString() : undefined,
-      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+      startDate: data.startDate && isValidDate(data.startDate) ? new Date(data.startDate).toISOString() : undefined,
+      dueDate: data.dueDate && isValidDate(data.dueDate) ? new Date(data.dueDate).toISOString() : undefined,
       stakeholderIds: selectedStakeholderIds.length > 0 ? selectedStakeholderIds : undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
     })
