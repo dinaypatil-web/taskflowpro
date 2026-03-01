@@ -207,12 +207,21 @@ function CalendarPageContent() {
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`p-2 sm:p-3 min-h-[80px] sm:min-h-[120px] border border-gray-200 bg-white hover:bg-gray-50 ${isToday ? 'ring-2 ring-primary-500' : ''
+                    className={`group p-2 sm:p-3 min-h-[80px] sm:min-h-[120px] border border-gray-200 bg-white hover:bg-gray-50 transition-colors relative ${isToday ? 'ring-2 ring-primary-500' : ''
                       }`}
                   >
-                    <div className={`text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${isToday ? 'text-primary-600' : 'text-gray-900'
-                      }`}>
-                      {day.getDate()}
+                    <div className="flex items-center justify-between mb-1 sm:mb-2">
+                      <div className={`text-xs sm:text-sm font-medium ${isToday ? 'text-primary-600' : 'text-gray-900'
+                        }`}>
+                        {day.getDate()}
+                      </div>
+                      <Link
+                        href={`/tasks/new?date=${day.toISOString().split('T')[0]}`}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-primary-500 hover:bg-primary-50 rounded transition-all"
+                        title="Add task for this day"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Link>
                     </div>
 
                     <div className="space-y-1">

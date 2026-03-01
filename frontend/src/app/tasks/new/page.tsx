@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -28,10 +28,12 @@ type TaskFormData = z.infer<typeof taskSchema>
 
 export default function NewTaskPage() {
   const router = useRouter()
+  const queryParams = useSearchParams()
   const queryClient = useQueryClient()
   const [selectedStakeholderIds, setSelectedStakeholderIds] = useState<string[]>([])
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const initialDate = queryParams.get('date')
 
   const {
     register,
@@ -43,6 +45,7 @@ export default function NewTaskPage() {
     defaultValues: {
       priority: 'MEDIUM',
       startDate: new Date().toISOString().slice(0, 16),
+      dueDate: initialDate ? `${initialDate}T12:00` : undefined,
     },
   })
 
