@@ -124,8 +124,31 @@ function CalendarPageContent() {
   const getEventsForDate = (date: Date) => {
     if (!monthData?.events) return []
 
-    const dateKey = date.toISOString().split('T')[0]
-    return monthData.events[dateKey] || []
+    const dateStr = date.toISOString().split('T')[0]
+    const events: any[] = []
+
+    // monthData.events is currently a Record<string, any[]> indexed by startDate.
+    // We need to iterate all events and check if the date falls in range.
+    Object.values(monthData.events).flat().forEach((event: any) => {
+      const start = new Date(event.startDate).toISOString().split('T')[0]
+
+      // Calculate visual end date for tracker
+      let end = new Date(event.endDate || event.startDate).toISOString().split('T')[0]
+      const today = new Date().toISOString().split('T')[0]
+      const dueDate = event.dueDate ? new Date(event.dueDate).toISOString().split('T')[0] : null
+
+      if (event.status !== 'COMPLETED' && dueDate && today > dueDate) {
+        // Extend to today if overdue and not completed
+        end = today > end ? today : end
+      }
+
+      if (dateStr >= start && dateStr <= end) {
+        events.push(event)
+      }
+    })
+
+    // De-duplicate in case of multiple events for same task (unlikely with taskId sync)
+    return events.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
   }
 
   const isTaskDelayed = (task: any) => {
@@ -301,20 +324,33 @@ function CalendarPageContent() {
 
                       {dayEvents.slice(0, 3).map((event: any) => {
                         const taskPayload = event.task || event
-                        const delayed = isTaskDelayed(taskPayload)
                         const id = event.taskId || event.id
+
+                        const dateStr = day.toISOString().split('T')[0]
+                        const startStr = new Date(event.startDate).toISOString().split('T')[0]
+                        const endStr = new Date(event.endDate || event.startDate).toISOString().split('T')[0]
+                        const dueDateStr = event.dueDate ? new Date(event.dueDate).toISOString().split('T')[0] : null
+                        const todayStr = new Date().toISOString().split('T')[0]
+
+                        const isDelayed = event.status !== 'COMPLETED' && dueDateStr && dateStr > dueDateStr
+                        const isStart = dateStr === startStr
+                        const isEnd = dateStr === endStr || (event.status !== 'COMPLETED' && dateStr === todayStr && dateStr > endStr)
+
+                        const baseStyle = isDelayed
+                          ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'
+                          : `${getPriorityColor(taskPayload.priority)} border-transparent hover:opacity-80`
+
                         return (
                           <Link
                             key={event.id}
                             href={`/tasks/${id}`}
-                            className={`block p-1 rounded text-[10px] sm:text-xs truncate transition-all border ${delayed
-                              ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                              : `${getPriorityColor(taskPayload.priority)} border-transparent hover:opacity-80`
+                            className={`block p-1 text-[10px] sm:text-xs truncate transition-all border ${baseStyle} ${isStart ? 'rounded-l' : ''
+                              } ${isEnd ? 'rounded-r' : 'border-r-0'} ${!isStart && !isEnd ? 'rounded-none' : ''
                               }`}
                           >
                             <div className="flex items-center">
-                              {delayed && <AlertCircle className="h-2 w-2 mr-1 flex-shrink-0" />}
-                              <span className="truncate">{event.title}</span>
+                              {isDelayed && dateStr === todayStr && <AlertCircle className="h-2 w-2 mr-1 flex-shrink-0" />}
+                              <span className="truncate">{isStart ? event.title : '\u00A0'}</span>
                             </div>
                           </Link>
                         )
