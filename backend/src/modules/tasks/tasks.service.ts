@@ -77,8 +77,8 @@ export class TasksService {
       isVoiceCreated: true,
       voiceMetadata: voiceMetadata ? JSON.stringify(voiceMetadata) : null,
       isDeleted: false,
-      startDate: taskData.startDate ? new Date(taskData.startDate) : now,
-      dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+      startDate: (taskData as any).startDate ? new Date((taskData as any).startDate) : now,
+      dueDate: (taskData as any).dueDate ? new Date((taskData as any).dueDate) : null,
       createdAt: now,
       updatedAt: now,
     };

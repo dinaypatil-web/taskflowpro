@@ -44,6 +44,11 @@ export class VoiceTaskDto {
   @IsString({ each: true })
   stakeholderIds?: string[];
 
+  @ApiProperty({ example: '2024-02-15T10:00:00Z', required: false })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
   @ApiProperty({
     example: {
       originalTranscript: 'Create a high priority task to complete project proposal by February 15th',
