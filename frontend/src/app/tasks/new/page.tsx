@@ -8,10 +8,10 @@ import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from 'react-query'
 import { tasksApi } from '@/lib/api/tasks'
 import { stakeholdersApi } from '@/lib/api/stakeholders'
-import { CreateTaskRequest, Priority } from '@/types/task'
+import { Attachment, CreateTaskRequest, Priority } from '@/types/task'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { ArrowLeft, Plus, X, Calendar, Flag, Users, FileText } from 'lucide-react'
+import { ArrowLeft, Plus, X, Calendar, Flag, Users, FileText, Upload, Paperclip, File, Image as ImageIcon, FileText as FileTextIcon } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { getPriorityColor } from '@/lib/utils'
@@ -20,6 +20,7 @@ const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
+  startDate: z.string().optional(),
   dueDate: z.string().optional(),
 })
 
@@ -29,6 +30,8 @@ export default function NewTaskPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [selectedStakeholderIds, setSelectedStakeholderIds] = useState<string[]>([])
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [isUploading, setIsUploading] = useState(false)
 
   const {
     register,
@@ -39,6 +42,7 @@ export default function NewTaskPage() {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       priority: 'MEDIUM',
+      startDate: new Date().toISOString().slice(0, 16),
     },
   })
 
@@ -74,8 +78,10 @@ export default function NewTaskPage() {
     createMutation.mutate({
       ...data,
       description: data.description || undefined,
+      startDate: data.startDate ? new Date(data.startDate).toISOString() : undefined,
       dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
       stakeholderIds: selectedStakeholderIds.length > 0 ? selectedStakeholderIds : undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
     })
   }
 
@@ -83,6 +89,33 @@ export default function NewTaskPage() {
     setSelectedStakeholderIds(prev =>
       prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
     )
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploading(true)
+    try {
+      const attachment = await tasksApi.uploadFile(file)
+      setAttachments(prev => [...prev, attachment])
+      toast.success('File uploaded successfully')
+    } catch (error) {
+      console.error('Upload failed:', error)
+      toast.error('Failed to upload file')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return <ImageIcon className="h-4 w-4" />
+    if (type === 'application/pdf') return <FileTextIcon className="h-4 w-4" />
+    return <File className="h-4 w-4" />
   }
 
   const priorities: { value: Priority; label: string }[] = [
@@ -94,7 +127,7 @@ export default function NewTaskPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6 pb-12">
         {/* Header */}
         <div className="flex items-center space-x-4">
           <Link
@@ -179,20 +212,81 @@ export default function NewTaskPage() {
               </div>
             </div>
 
-            {/* Due Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Start Date */}
+              <div>
+                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Start Date</span>
+                  </div>
+                </label>
+                <input
+                  type="datetime-local"
+                  id="startDate"
+                  {...register('startDate')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Due Date */}
+              <div>
+                <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Due Date</span>
+                  </div>
+                </label>
+                <input
+                  type="datetime-local"
+                  id="dueDate"
+                  {...register('dueDate')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Attachments */}
             <div>
-              <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Due Date</span>
+                  <Paperclip className="h-4 w-4" />
+                  <span>Attachments</span>
                 </div>
               </label>
-              <input
-                type="datetime-local"
-                id="dueDate"
-                {...register('dueDate')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
+
+              <div className="space-y-3">
+                {attachments.map((attachment, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex items-center overflow-hidden">
+                      <div className="p-2 bg-white rounded border border-gray-100 text-gray-400 mr-2 shrink-0">
+                        {getFileIcon(attachment.type)}
+                      </div>
+                      <span className="text-sm text-gray-700 truncate">{attachment.name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+
+                {isUploading && (
+                  <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                    <LoadingSpinner size="sm" />
+                    <span className="ml-2 text-xs text-gray-500">Uploading...</span>
+                  </div>
+                )}
+
+                <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all cursor-pointer group">
+                  <Upload className="h-4 w-4 mr-2 text-gray-400 group-hover:text-primary-500" />
+                  <span className="text-sm text-gray-500 group-hover:text-primary-600 font-medium">Click to upload files</span>
+                  <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+                </label>
+              </div>
             </div>
 
             {/* Stakeholder Assignment */}
@@ -285,8 +379,8 @@ export default function NewTaskPage() {
               </Link>
               <button
                 type="submit"
-                disabled={createMutation.isLoading}
-                className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                disabled={createMutation.isLoading || isUploading}
+                className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center shadow-lg shadow-primary-100"
               >
                 {createMutation.isLoading && (
                   <LoadingSpinner size="sm" className="mr-2" />

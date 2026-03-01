@@ -42,4 +42,17 @@ export class CreateTaskDto {
   @IsArray()
   @IsString({ each: true })
   stakeholderIds?: string[];
+
+  @ApiProperty({ example: '2024-02-15T10:00:00Z', required: false })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiProperty({
+    example: [{ name: 'manual.pdf', url: 'https://...', type: 'application/pdf', size: 1024 }],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  attachments?: any[];
 }

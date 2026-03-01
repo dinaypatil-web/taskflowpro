@@ -113,16 +113,66 @@
             ]
         },
         {
+            "collectionGroup": "stakeholders",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "deletedAt",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
             "collectionGroup": "reminders",
             "queryScope": "COLLECTION",
             "fields": [
                 {
-                    "fieldPath": "taskId",
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
                     "order": "ASCENDING"
                 },
                 {
                     "fieldPath": "scheduledAt",
                     "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "reminder_logs",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "stakeholderId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "reminder_logs",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "reminderId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
                 }
             ]
         }

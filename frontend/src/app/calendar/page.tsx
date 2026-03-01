@@ -18,7 +18,8 @@ import {
   Plus,
   Calendar as CalendarIcon,
   Clock,
-  User
+  User,
+  AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatStatus, formatDate, getPriorityColor, getStatusColor } from '@/lib/utils'
@@ -40,9 +41,10 @@ function CalendarPageContent() {
   const { data: tasks, isLoading } = useQuery(
     ['calendar-tasks', currentDate.getMonth(), currentDate.getFullYear()],
     () => tasksApi.getTasks({
-      dueDateFrom: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`,
-      dueDateTo: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-31`,
-      limit: 100,
+      // Fetch a wider range to handle tasks that start before and end after the current month
+      dueDateFrom: `${currentDate.getFullYear()}-${String(currentDate.getMonth()).padStart(2, '0')}-01`,
+      dueDateTo: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 2).padStart(2, '0')}-31`,
+      limit: 1000,
       sortBy: 'dueDate',
       sortOrder: 'asc'
     }),
@@ -80,15 +82,31 @@ function CalendarPageContent() {
   const getTasksForDate = (date: Date) => {
     if (!tasks?.tasks) return []
 
+    const targetDate = new Date(date)
+    targetDate.setHours(0, 0, 0, 0)
+
     return tasks.tasks.filter(task => {
-      if (!task.dueDate) return false
-      const taskDate = new Date(task.dueDate)
-      return (
-        taskDate.getDate() === date.getDate() &&
-        taskDate.getMonth() === date.getMonth() &&
-        taskDate.getFullYear() === date.getFullYear()
-      )
+      const start = task.startDate ? new Date(task.startDate) : new Date(task.createdAt)
+      start.setHours(0, 0, 0, 0)
+
+      let end: Date
+      if (task.status === 'COMPLETED' && task.completedAt) {
+        end = new Date(task.completedAt)
+      } else if (task.dueDate) {
+        end = new Date(task.dueDate)
+      } else {
+        end = new Date() // Still active
+      }
+      end.setHours(23, 59, 59, 999)
+
+      return targetDate >= start && targetDate <= end
     })
+  }
+
+  const isTaskDelayed = (task: any) => {
+    if (task.status === 'COMPLETED') return false
+    if (!task.dueDate) return false
+    return new Date(task.dueDate) < new Date()
   }
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -216,19 +234,28 @@ function CalendarPageContent() {
                     </div>
 
                     <div className="space-y-1">
-                      {dayTasks.slice(0, 2).map((task) => (
-                        <Link
-                          key={task.id}
-                          href={`/tasks/${task.id}`}
-                          className={`block p-1 rounded text-xs truncate ${getPriorityColor(task.priority)} hover:opacity-80`}
-                        >
-                          {task.title}
-                        </Link>
-                      ))}
+                      {dayTasks.slice(0, 3).map((task) => {
+                        const delayed = isTaskDelayed(task)
+                        return (
+                          <Link
+                            key={task.id}
+                            href={`/tasks/${task.id}`}
+                            className={`block p-1 rounded text-[10px] sm:text-xs truncate transition-all border ${delayed
+                                ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                : `${getPriorityColor(task.priority)} border-transparent hover:opacity-80`
+                              }`}
+                          >
+                            <div className="flex items-center">
+                              {delayed && <AlertCircle className="h-2 w-2 mr-1 flex-shrink-0" />}
+                              <span className="truncate">{task.title}</span>
+                            </div>
+                          </Link>
+                        )
+                      })}
 
-                      {dayTasks.length > 2 && (
-                        <div className="text-xs text-gray-500">
-                          +{dayTasks.length - 2} more
+                      {dayTasks.length > 3 && (
+                        <div className="text-[10px] text-gray-500 text-center">
+                          +{dayTasks.length - 3} more
                         </div>
                       )}
                     </div>
@@ -268,6 +295,11 @@ function CalendarPageContent() {
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                           {task.priority}
                         </span>
+                        {isTaskDelayed(task) && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Delayed
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1 flex items-center space-x-4 text-xs text-gray-500">
                         {task.dueDate && (

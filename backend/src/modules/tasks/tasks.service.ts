@@ -4,10 +4,14 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
 import { VoiceTaskDto } from './dto/voice-task.dto';
+import { StorageService } from '../../shared/storage/storage.service';
 
 @Injectable()
 export class TasksService {
-  constructor(private firestore: FirestoreService) { }
+  constructor(
+    private firestore: FirestoreService,
+    private storage: StorageService,
+  ) { }
 
   private get tasksCollection() {
     return this.firestore.collection('tasks');
@@ -29,6 +33,8 @@ export class TasksService {
       isVoiceCreated: false,
       voiceMetadata: null,
       isDeleted: false,
+      startDate: taskData.startDate ? new Date(taskData.startDate) : now,
+      attachments: taskData.attachments || [],
       createdAt: now,
       updatedAt: now,
     };
@@ -139,6 +145,7 @@ export class TasksService {
         id: doc.id,
         ...taskData,
         taskStakeholders: stakeholders,
+        startDate: FirestoreService.safeToDate(taskData.startDate),
         dueDate: FirestoreService.safeToDate(taskData.dueDate),
         createdAt: FirestoreService.safeToDate(taskData.createdAt),
         updatedAt: FirestoreService.safeToDate(taskData.updatedAt),
@@ -178,6 +185,7 @@ export class TasksService {
       taskStakeholders: stakeholders,
       reminders: remindersSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
       calendarEvents: calendarEventsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
+      startDate: FirestoreService.safeToDate(taskData.startDate),
       dueDate: FirestoreService.safeToDate(taskData.dueDate),
       createdAt: FirestoreService.safeToDate(taskData.createdAt),
       updatedAt: FirestoreService.safeToDate(taskData.updatedAt),
@@ -306,6 +314,10 @@ export class TasksService {
         const stakeholders = await this.getTaskStakeholders(doc.id);
         return { id: doc.id, ...data, taskStakeholders: stakeholders };
       }));
+  }
+
+  async uploadFile(file: any) {
+    return this.storage.uploadFile(file);
   }
 
   private async getTaskStakeholders(taskId: string) {

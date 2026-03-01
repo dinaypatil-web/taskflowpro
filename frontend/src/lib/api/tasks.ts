@@ -7,6 +7,7 @@ import {
   TaskQuery,
   TasksResponse,
   TaskStats,
+  Attachment,
 } from '@/types/task'
 
 export const tasksApi = {
@@ -53,6 +54,17 @@ export const tasksApi = {
   getUpcomingTasks: async (days?: number): Promise<Task[]> => {
     const response = await apiClient.get('/tasks/upcoming', {
       params: days ? { days } : {},
+    })
+    return response.data
+  },
+
+  uploadFile: async (file: File): Promise<Attachment> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await apiClient.post('/tasks/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     })
     return response.data
   },

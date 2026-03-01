@@ -18,12 +18,20 @@ import {
     ChevronRight,
     Phone,
     MessageSquare,
-    ExternalLink
+    ExternalLink,
+    Paperclip,
+    Download,
+    FileText,
+    Image as ImageIcon,
+    File,
+    Upload,
+    X
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatStatus, getPriorityColor, getStatusColor } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { AuthProtectedPage } from '@/components/ClientOnly'
+import { useState } from 'react'
 
 interface TaskDetailsPageProps {
     params: {
@@ -42,6 +50,7 @@ export default function TaskDetailsPage({ params }: TaskDetailsPageProps) {
 function TaskDetailsContent({ id }: { id: string }) {
     const router = useRouter()
     const queryClient = useQueryClient()
+    const [isUploading, setIsUploading] = useState(false)
 
     const { data: task, isLoading, isError } = useQuery(
         ['task', id],
@@ -64,6 +73,16 @@ function TaskDetailsContent({ id }: { id: string }) {
         }
     )
 
+    const updateAttachmentsMutation = useMutation(
+        (attachments: any[]) => tasksApi.updateTask(id, { attachments }),
+        {
+            onSuccess: () => {
+                queryClient.invalidateQueries(['task', id])
+                toast.success('Attachments updated')
+            }
+        }
+    )
+
     const deleteMutation = useMutation(
         () => tasksApi.deleteTask(id),
         {
@@ -79,6 +98,36 @@ function TaskDetailsContent({ id }: { id: string }) {
         if (confirm('Are you sure you want to delete this task?')) {
             deleteMutation.mutate()
         }
+    }
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setIsUploading(true)
+        try {
+            const attachment = await tasksApi.uploadFile(file)
+            const currentAttachments = task?.attachments || []
+            await updateAttachmentsMutation.mutateAsync([...currentAttachments, attachment])
+            toast.success('File uploaded successfully')
+        } catch (error) {
+            console.error('Upload failed:', error)
+            toast.error('Failed to upload file')
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    const removeAttachment = (index: number) => {
+        const newAttachments = [...(task?.attachments || [])]
+        newAttachments.splice(index, 1)
+        updateAttachmentsMutation.mutate(newAttachments)
+    }
+
+    const getFileIcon = (type: string) => {
+        if (type.startsWith('image/')) return <ImageIcon className="h-5 w-5" />
+        if (type === 'application/pdf') return <FileText className="h-5 w-5" />
+        return <File className="h-5 w-5" />
     }
 
     if (isLoading) {
@@ -109,7 +158,7 @@ function TaskDetailsContent({ id }: { id: string }) {
 
     return (
         <DashboardLayout>
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-4xl mx-auto space-y-6 pb-12">
                 {/* Breadcrumbs & Actions */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center text-sm text-gray-500">
@@ -180,14 +229,14 @@ function TaskDetailsContent({ id }: { id: string }) {
                             </div>
                         </div>
 
-                        <div className="mt-8 pt-8 border-t border-gray-50 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="mt-8 pt-8 border-t border-gray-50 grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
                                     <Calendar className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Created Date</p>
-                                    <p className="text-gray-900 font-semibold">{formatDate(task.createdAt)}</p>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Start Date</p>
+                                    <p className="text-gray-900 font-semibold">{task.startDate ? formatDate(task.startDate) : formatDate(task.createdAt)}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
@@ -199,7 +248,86 @@ function TaskDetailsContent({ id }: { id: string }) {
                                     <p className="text-gray-900 font-semibold">{task.dueDate ? formatDate(task.dueDate) : 'No due date set'}</p>
                                 </div>
                             </div>
+                            <div className="flex items-center gap-4">
+                                <div className={`h-12 w-12 rounded-xl flex items-center justify-center bg-green-50 text-green-600`}>
+                                    <CheckCircle className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Completed</p>
+                                    <p className="text-gray-900 font-semibold">{task.completedAt ? formatDate(task.completedAt) : 'In Progress'}</p>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Attachments Card */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-gray-900 flex items-center">
+                            <Paperclip className="h-5 w-5 mr-2 text-primary-500" />
+                            Attachments
+                        </h2>
+                        <label className="cursor-pointer inline-flex items-center px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-sm font-bold hover:bg-primary-100 transition-colors">
+                            <Upload className="h-4 w-4 mr-2" />
+                            Add File
+                            <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+                        </label>
+                    </div>
+                    <div className="p-6">
+                        {isUploading && (
+                            <div className="flex items-center justify-center p-4 mb-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <LoadingSpinner size="sm" />
+                                <span className="ml-3 text-sm text-gray-500">Uploading file...</span>
+                            </div>
+                        )}
+
+                        {task.attachments && task.attachments.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {task.attachments.map((attachment: any, index: number) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center p-4 rounded-xl border border-gray-100 hover:border-primary-100 hover:bg-primary-50/30 transition-all group"
+                                    >
+                                        <div className="h-10 w-10 rounded-lg bg-gray-50 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:text-primary-500 transition-colors">
+                                            {getFileIcon(attachment.type)}
+                                        </div>
+                                        <div className="ml-3 flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-gray-900 truncate">
+                                                {attachment.name}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {(attachment.size / 1024).toFixed(1)} KB
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 ml-2">
+                                            <a
+                                                href={attachment.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="p-2 text-gray-400 hover:text-primary-600 hover:bg-white rounded-lg transition-colors"
+                                                title="Download/View"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                            </a>
+                                            <button
+                                                onClick={() => removeAttachment(index)}
+                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-white rounded-lg transition-colors"
+                                                title="Remove"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            !isUploading && (
+                                <div className="text-center py-8">
+                                    <p className="text-gray-500 text-sm italic">No files attached to this task.</p>
+                                </div>
+                            )
+                        )}
                     </div>
                 </div>
 

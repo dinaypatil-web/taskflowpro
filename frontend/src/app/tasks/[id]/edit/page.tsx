@@ -8,19 +8,20 @@ import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from 'react-query'
 import { tasksApi } from '@/lib/api/tasks'
 import { stakeholdersApi } from '@/lib/api/stakeholders'
-import { UpdateTaskRequest, Priority } from '@/types/task'
+import { Attachment, UpdateTaskRequest, Priority, TaskStatus } from '@/types/task'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { ArrowLeft, Plus, X, Calendar, Flag, Users, FileText, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Check, X, Calendar, Flag, Users, FileText, Upload, Paperclip, File, Image as ImageIcon, FileText as FileTextIcon, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { getPriorityColor } from '@/lib/utils'
-import { AuthProtectedPage } from '@/components/ClientOnly'
+import { getPriorityColor, getStatusColor, formatStatus } from '@/lib/utils'
 
 const taskSchema = z.object({
     title: z.string().min(1, 'Title is required'),
     description: z.string().optional(),
     priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
+    status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'OVERDUE']).optional(),
+    startDate: z.string().optional(),
     dueDate: z.string().optional(),
 })
 
@@ -33,17 +34,28 @@ interface EditTaskPageProps {
 }
 
 export default function EditTaskPage({ params }: EditTaskPageProps) {
-    return (
-        <AuthProtectedPage>
-            <EditTaskContent id={params.id} />
-        </AuthProtectedPage>
-    )
-}
-
-function EditTaskContent({ id }: { id: string }) {
     const router = useRouter()
     const queryClient = useQueryClient()
+    const taskId = params.id
+
     const [selectedStakeholderIds, setSelectedStakeholderIds] = useState<string[]>([])
+    const [attachments, setAttachments] = useState<Attachment[]>([])
+    const [isUploading, setIsUploading] = useState(false)
+
+    const { data: task, isLoading: isTaskLoading, isError } = useQuery(
+        ['task', taskId],
+        () => tasksApi.getTask(taskId),
+        {
+            onSuccess: (data) => {
+                if (data.taskStakeholders) {
+                    setSelectedStakeholderIds(data.taskStakeholders.map(ts => ts.stakeholderId))
+                }
+                if (data.attachments) {
+                    setAttachments(data.attachments)
+                }
+            }
+        }
+    )
 
     const {
         register,
@@ -55,22 +67,21 @@ function EditTaskContent({ id }: { id: string }) {
         resolver: zodResolver(taskSchema),
     })
 
-    // Fetch task data
-    const { isLoading: isLoadingTask } = useQuery(
-        ['task', id],
-        () => tasksApi.getTask(id),
-        {
-            onSuccess: (data) => {
-                reset({
-                    title: data.title,
-                    description: data.description || '',
-                    priority: data.priority,
-                    dueDate: data.dueDate ? new Date(data.dueDate).toISOString().slice(0, 16) : '',
-                })
-                setSelectedStakeholderIds(data.taskStakeholders?.map((ts: any) => ts.stakeholder.id) || [])
-            },
+    useEffect(() => {
+        if (task) {
+            reset({
+                title: task.title,
+                description: task.description || '',
+                priority: task.priority,
+                status: task.status,
+                startDate: task.startDate ? new Date(task.startDate).toISOString().slice(0, 16) : '',
+                dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
+            })
         }
-    )
+    }, [task, reset])
+
+    const selectedPriority = watch('priority')
+    const selectedStatus = watch('status')
 
     // Fetch stakeholders for the assignment picker
     const { data: stakeholdersData } = useQuery(
@@ -84,13 +95,13 @@ function EditTaskContent({ id }: { id: string }) {
     )
 
     const updateMutation = useMutation(
-        (data: UpdateTaskRequest) => tasksApi.updateTask(id, data),
+        (data: UpdateTaskRequest) => tasksApi.updateTask(taskId, data),
         {
             onSuccess: () => {
-                queryClient.invalidateQueries(['task', id])
+                queryClient.invalidateQueries(['task', taskId])
                 queryClient.invalidateQueries('tasks')
                 toast.success('Task updated successfully!')
-                router.push(`/tasks/${id}`)
+                router.push(`/tasks/${taskId}`)
             },
             onError: (error: any) => {
                 const message = error.response?.data?.message || 'Failed to update task'
@@ -99,14 +110,14 @@ function EditTaskContent({ id }: { id: string }) {
         }
     )
 
-    const selectedPriority = watch('priority')
-
     const onSubmit = (data: TaskFormData) => {
         updateMutation.mutate({
             ...data,
             description: data.description || undefined,
+            startDate: data.startDate ? new Date(data.startDate).toISOString() : undefined,
             dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
-            stakeholderIds: selectedStakeholderIds.length > 0 ? selectedStakeholderIds : undefined,
+            stakeholderIds: selectedStakeholderIds,
+            attachments: attachments,
         })
     }
 
@@ -116,6 +127,33 @@ function EditTaskContent({ id }: { id: string }) {
         )
     }
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setIsUploading(true)
+        try {
+            const attachment = await tasksApi.uploadFile(file)
+            setAttachments(prev => [...prev, attachment])
+            toast.success('File uploaded successfully')
+        } catch (error) {
+            console.error('Upload failed:', error)
+            toast.error('Failed to upload file')
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const getFileIcon = (type: string) => {
+        if (type.startsWith('image/')) return <ImageIcon className="h-4 w-4" />
+        if (type === 'application/pdf') return <FileTextIcon className="h-4 w-4" />
+        return <File className="h-4 w-4" />
+    }
+
     const priorities: { value: Priority; label: string }[] = [
         { value: 'LOW', label: 'Low' },
         { value: 'MEDIUM', label: 'Medium' },
@@ -123,7 +161,14 @@ function EditTaskContent({ id }: { id: string }) {
         { value: 'URGENT', label: 'Urgent' },
     ]
 
-    if (isLoadingTask) {
+    const statuses: { value: TaskStatus; label: string }[] = [
+        { value: 'PENDING', label: 'Pending' },
+        { value: 'IN_PROGRESS', label: 'In Progress' },
+        { value: 'COMPLETED', label: 'Completed' },
+        { value: 'CANCELLED', label: 'Cancelled' },
+    ]
+
+    if (isTaskLoading) {
         return (
             <DashboardLayout>
                 <div className="flex justify-center py-12">
@@ -133,183 +178,283 @@ function EditTaskContent({ id }: { id: string }) {
         )
     }
 
+    if (isError || !task) {
+        return (
+            <DashboardLayout>
+                <div className="text-center py-12">
+                    <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900">Task Not Found</h3>
+                    <p className="mt-1 text-sm text-gray-500">The task you are trying to edit does not exist.</p>
+                    <Link href="/tasks" className="mt-6 inline-flex items-center text-primary-600 hover:text-primary-700 font-medium">
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Tasks
+                    </Link>
+                </div>
+            </DashboardLayout>
+        )
+    }
+
     return (
         <DashboardLayout>
-            <div className="max-w-2xl mx-auto space-y-6">
-                {/* Breadcrumbs */}
-                <div className="flex items-center text-sm text-gray-500 mb-2">
-                    <Link href="/tasks" className="hover:text-primary-600 font-medium">Tasks</Link>
-                    <ChevronRight className="h-4 w-4 mx-2" />
-                    <Link href={`/tasks/${id}`} className="hover:text-primary-600 font-medium">Details</Link>
-                    <ChevronRight className="h-4 w-4 mx-2" />
-                    <span className="text-gray-900 font-bold">Edit Task</span>
-                </div>
-
+            <div className="max-w-2xl mx-auto space-y-6 pb-12">
                 {/* Header */}
                 <div className="flex items-center space-x-4">
                     <Link
-                        href={`/tasks/${id}`}
-                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                        href={`/tasks/${taskId}`}
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Link>
                     <div className="flex-1">
-                        <h1 className="text-2xl font-bold text-gray-900">Edit Task</h1>
-                        <p className="text-sm text-gray-600 italic">Adjust your task details and assignments below.</p>
+                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Edit Task</h1>
+                        <p className="text-sm sm:text-base text-gray-600">Update task details and preferences</p>
                     </div>
                 </div>
 
                 {/* Form */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <form onSubmit={handleSubmit(onSubmit)} className="p-6 sm:p-8 space-y-8">
+                <div className="bg-white rounded-lg shadow-sm">
+                    <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
                         {/* Title */}
-                        <div className="space-y-2">
-                            <label htmlFor="title" className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                Task Title *
+                        <div>
+                            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                                <div className="flex items-center space-x-2">
+                                    <FileText className="h-4 w-4" />
+                                    <span>Title *</span>
+                                </div>
                             </label>
-                            <div className="relative">
-                                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    id="title"
-                                    {...register('title')}
-                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all font-medium text-gray-900"
-                                    placeholder="What needs to be done?"
-                                />
-                            </div>
+                            <input
+                                type="text"
+                                id="title"
+                                {...register('title')}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                placeholder="Enter task title"
+                            />
                             {errors.title && (
-                                <p className="mt-1 text-sm text-red-600 font-bold">{errors.title.message}</p>
+                                <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
                             )}
                         </div>
 
                         {/* Description */}
-                        <div className="space-y-2">
-                            <label htmlFor="description" className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                Detailed Description
+                        <div>
+                            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                                Description
                             </label>
                             <textarea
                                 id="description"
                                 {...register('description')}
                                 rows={4}
-                                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all font-medium text-gray-900 resize-none"
-                                placeholder="Add more context or notes here..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                                placeholder="Add a description for your task (optional)"
                             />
                         </div>
 
-                        {/* Priority */}
-                        <div className="space-y-4">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                Priority Level
-                            </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                {priorities.map(({ value, label }) => (
-                                    <label
-                                        key={value}
-                                        className={`
-                      relative flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all
-                      ${selectedPriority === value
-                                                ? `${getPriorityColor(value)} border-current bg-white font-bold opacity-100 scale-105 shadow-sm`
-                                                : 'border-transparent bg-gray-50 text-gray-500 hover:bg-gray-100 opacity-70'
-                                            }
-                    `}
-                                    >
-                                        <input
-                                            type="radio"
-                                            value={value}
-                                            {...register('priority')}
-                                            className="sr-only"
-                                        />
-                                        <Flag className={`h-4 w-4 mr-2 ${selectedPriority === value ? 'animate-pulse' : ''}`} />
-                                        <span className="text-sm">{label}</span>
-                                    </label>
-                                ))}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            {/* Status */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Status
+                                </label>
+                                <select
+                                    {...register('status')}
+                                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm font-medium ${getStatusColor(selectedStatus as TaskStatus)} bg-opacity-10 border-opacity-20`}
+                                >
+                                    {statuses.map(({ value, label }) => (
+                                        <option key={value} value={value} className="text-gray-900 bg-white">{label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Priority */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Priority
+                                </label>
+                                <select
+                                    {...register('priority')}
+                                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm font-medium ${getPriorityColor(selectedPriority as Priority)} bg-opacity-10 border-opacity-20`}
+                                >
+                                    {priorities.map(({ value, label }) => (
+                                        <option key={value} value={value} className="text-gray-900 bg-white">{label}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 
-                        {/* Due Date */}
-                        <div className="space-y-2">
-                            <label htmlFor="dueDate" className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                Target Deadline
-                            </label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Start Date */}
+                            <div>
+                                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
+                                    <div className="flex items-center space-x-2">
+                                        <Calendar className="h-4 w-4" />
+                                        <span>Start Date</span>
+                                    </div>
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    id="startDate"
+                                    {...register('startDate')}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                />
+                            </div>
+
+                            {/* Due Date */}
+                            <div>
+                                <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-2">
+                                    <div className="flex items-center space-x-2">
+                                        <Calendar className="h-4 w-4" />
+                                        <span>Due Date</span>
+                                    </div>
+                                </label>
                                 <input
                                     type="datetime-local"
                                     id="dueDate"
                                     {...register('dueDate')}
-                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all font-medium text-gray-900"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 />
                             </div>
                         </div>
 
-                        {/* Stakeholder Assignment */}
-                        <div className="space-y-4 pt-4">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center justify-between">
-                                <span>Assigned Stakeholders</span>
-                                <span className="bg-primary-100 text-primary-600 px-2 py-0.5 rounded text-[10px]">{selectedStakeholderIds.length} Selected</span>
+                        {/* Attachments */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <div className="flex items-center space-x-2">
+                                    <Paperclip className="h-4 w-4" />
+                                    <span>Attachments</span>
+                                </div>
                             </label>
 
-                            {/* Stakeholder list selection */}
-                            {stakeholdersData?.stakeholders && stakeholdersData.stakeholders.length > 0 ? (
-                                <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                                    <div className="max-h-56 overflow-y-auto divide-y divide-gray-50">
-                                        {stakeholdersData.stakeholders.map(stakeholder => (
+                            <div className="space-y-3">
+                                {attachments.map((attachment, index) => (
+                                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
+                                        <div className="flex items-center overflow-hidden">
+                                            <div className="p-2 bg-white rounded border border-gray-100 text-gray-400 mr-2 shrink-0">
+                                                {getFileIcon(attachment.type)}
+                                            </div>
+                                            <span className="text-sm text-gray-700 truncate">{attachment.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="p-1 text-gray-400 hover:text-primary-500">
+                                                <ArrowLeft className="h-4 w-4 rotate-180" />
+                                            </a>
                                             <button
-                                                key={stakeholder.id}
                                                 type="button"
-                                                onClick={() => toggleStakeholder(stakeholder.id)}
-                                                className={`w-full flex items-center p-4 text-left transition-all
-                          ${selectedStakeholderIds.includes(stakeholder.id)
-                                                        ? 'bg-primary-50 text-primary-900'
-                                                        : 'hover:bg-gray-50 text-gray-700'
-                                                    }
-                        `}
+                                                onClick={() => removeAttachment(index)}
+                                                className="p-1 text-gray-400 hover:text-red-500 transition-colors"
                                             >
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black mr-4 shadow-sm
-                          ${selectedStakeholderIds.includes(stakeholder.id)
-                                                        ? 'bg-primary-600 text-white'
-                                                        : 'bg-gray-200 text-gray-500'
-                                                    }
-                        `}>
-                                                    {stakeholder.firstName.charAt(0)}{stakeholder.lastName.charAt(0)}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <span className="font-bold text-sm">{stakeholder.firstName} {stakeholder.lastName}</span>
-                                                    {stakeholder.organization && (
-                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter mt-0.5">{stakeholder.organization}</p>
-                                                    )}
-                                                </div>
-                                                <div className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedStakeholderIds.includes(stakeholder.id) ? 'bg-primary-500 border-primary-500' : 'border-gray-200'}`}>
-                                                    {selectedStakeholderIds.includes(stakeholder.id) && <X className="h-4 w-4 text-white" />}
-                                                </div>
+                                                <X className="h-4 w-4" />
                                             </button>
-                                        ))}
+                                        </div>
                                     </div>
+                                ))}
+
+                                {isUploading && (
+                                    <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                        <LoadingSpinner size="sm" />
+                                        <span className="ml-2 text-xs text-gray-500">Uploading...</span>
+                                    </div>
+                                )}
+
+                                <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all cursor-pointer group">
+                                    <Upload className="h-4 w-4 mr-2 text-gray-400 group-hover:text-primary-500" />
+                                    <span className="text-sm text-gray-500 group-hover:text-primary-600 font-medium">Click to upload more files</span>
+                                    <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Stakeholder Assignment */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <div className="flex items-center space-x-2">
+                                    <Users className="h-4 w-4" />
+                                    <span>Assigned Stakeholders</span>
+                                </div>
+                            </label>
+
+                            {/* Selected stakeholders */}
+                            {selectedStakeholderIds.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {selectedStakeholderIds.map(id => {
+                                        const stakeholder = stakeholdersData?.stakeholders?.find(s => s.id === id)
+                                        if (!stakeholder) return null
+                                        return (
+                                            <span
+                                                key={id}
+                                                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary-100 text-primary-800"
+                                            >
+                                                {stakeholder.firstName} {stakeholder.lastName}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleStakeholder(id)}
+                                                    className="ml-2 text-primary-600 hover:text-primary-800"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </span>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Stakeholder list */}
+                            {stakeholdersData?.stakeholders && stakeholdersData.stakeholders.length > 0 ? (
+                                <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto">
+                                    {stakeholdersData.stakeholders.map(stakeholder => (
+                                        <button
+                                            key={stakeholder.id}
+                                            type="button"
+                                            onClick={() => toggleStakeholder(stakeholder.id)}
+                                            className={`w-full flex items-center px-3 py-2 text-left text-sm transition-colors border-b border-gray-100 last:border-b-0
+                        ${selectedStakeholderIds.includes(stakeholder.id)
+                                                    ? 'bg-primary-50 text-primary-700'
+                                                    : 'hover:bg-gray-50 text-gray-700'
+                                                }
+                      `}
+                                        >
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium mr-3
+                        ${selectedStakeholderIds.includes(stakeholder.id)
+                                                    ? 'bg-primary-500 text-white'
+                                                    : 'bg-gray-200 text-gray-600'
+                                                }
+                      `}>
+                                                {stakeholder.firstName.charAt(0)}{stakeholder.lastName.charAt(0)}
+                                            </div>
+                                            <div className="flex-1">
+                                                <span className="font-medium">{stakeholder.firstName} {stakeholder.lastName}</span>
+                                                {stakeholder.organization && (
+                                                    <span className="text-gray-400 ml-2">· {stakeholder.organization}</span>
+                                                )}
+                                            </div>
+                                            {selectedStakeholderIds.includes(stakeholder.id) && (
+                                                <Check className="h-4 w-4 text-primary-500" />
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
                             ) : (
-                                <div className="bg-gray-50 rounded-xl p-4 text-center">
-                                    <p className="text-xs text-gray-500 italic">No stakeholders available to assign.</p>
-                                </div>
+                                <p className="text-sm text-gray-500 italic text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                    No stakeholders available to assign.
+                                </p>
                             )}
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center justify-end space-x-4 pt-8 border-t border-gray-50">
+                        <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
                             <Link
-                                href={`/tasks/${id}`}
-                                className="px-6 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors"
+                                href={`/tasks/${taskId}`}
+                                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                             >
-                                Discard Changes
+                                Cancel
                             </Link>
                             <button
                                 type="submit"
-                                disabled={updateMutation.isLoading}
-                                className="px-10 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-bold shadow-lg shadow-primary-50 flex items-center"
+                                disabled={updateMutation.isLoading || isUploading}
+                                className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center shadow-lg shadow-primary-100 font-bold"
                             >
                                 {updateMutation.isLoading && (
                                     <LoadingSpinner size="sm" className="mr-2" />
                                 )}
-                                Save Task
+                                Save Changes
                             </button>
                         </div>
                     </form>

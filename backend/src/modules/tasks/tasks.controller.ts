@@ -9,7 +9,10 @@ import {
   Query,
   UseGuards,
   Request,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TasksService } from './tasks.service';
@@ -23,7 +26,7 @@ import { VoiceTaskDto } from './dto/voice-task.dto';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(private readonly tasksService: TasksService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new task' })
@@ -89,5 +92,13 @@ export class TasksController {
   @ApiResponse({ status: 404, description: 'Task not found' })
   remove(@Request() req, @Param('id') id: string) {
     return this.tasksService.remove(req.user.id, id);
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload an attachment to a task' })
+  @ApiResponse({ status: 201, description: 'File uploaded successfully' })
+  async uploadFile(@UploadedFile() file: any) {
+    return this.tasksService.uploadFile(file);
   }
 }

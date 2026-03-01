@@ -1,6 +1,13 @@
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'OVERDUE'
 
+export interface Attachment {
+  name: string
+  url: string
+  type: string
+  size: number
+}
+
 export interface Task {
   id: string
   userId: string
@@ -8,7 +15,9 @@ export interface Task {
   description?: string
   priority: Priority
   status: TaskStatus
+  startDate?: string
   dueDate?: string
+  attachments?: Attachment[]
   completedAt?: string
   isDeleted: boolean
   createdAt: string
@@ -67,8 +76,10 @@ export interface CreateTaskRequest {
   title: string
   description?: string
   priority?: Priority
+  startDate?: string
   dueDate?: string
   stakeholderIds?: string[]
+  attachments?: Attachment[]
 }
 
 export interface UpdateTaskRequest {
@@ -76,16 +87,20 @@ export interface UpdateTaskRequest {
   description?: string
   priority?: Priority
   status?: TaskStatus
+  startDate?: string
   dueDate?: string
   stakeholderIds?: string[]
+  attachments?: Attachment[]
 }
 
 export interface VoiceTaskRequest {
   title: string
   description?: string
   priority?: Priority
+  startDate?: string
   dueDate?: string
   stakeholderIds?: string[]
+  attachments?: Attachment[]
   voiceMetadata?: VoiceMetadata
 }
 
