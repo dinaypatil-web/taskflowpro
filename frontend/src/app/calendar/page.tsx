@@ -41,12 +41,20 @@ function CalendarPageContent() {
   const { data: tasks, isLoading } = useQuery(
     ['calendar-tasks', currentDate.getMonth(), currentDate.getFullYear()],
     () => {
+      // Helper to format date as YYYY-MM-DD in LOCAL time
+      const toLocalISOString = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0); // Last day of next month
 
       return tasksApi.getTasks({
-        dueDateFrom: start.toISOString().split('T')[0],
-        dueDateTo: end.toISOString().split('T')[0],
+        dueDateFrom: toLocalISOString(start),
+        dueDateTo: toLocalISOString(end),
         limit: 1000,
         sortBy: 'dueDate',
         sortOrder: 'asc'
