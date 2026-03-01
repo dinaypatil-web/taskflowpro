@@ -9,16 +9,11 @@ export class StorageService {
     private bucket: any;
 
     constructor(private configService: ConfigService) {
-        const serviceAccount = this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT');
-        if (serviceAccount) {
-            const parsedAccount = JSON.parse(serviceAccount);
-            if (!admin.apps.length) {
-                admin.initializeApp({
-                    credential: admin.credential.cert(parsedAccount),
-                    storageBucket: `${parsedAccount.project_id}.firebasestorage.app`
-                });
-            }
+        if (!admin.apps.length) {
+            this.logger.warn('Firebase not initialized when StorageService was created. Ensure FirestoreModule is loaded.');
+        } else {
             this.bucket = admin.storage().bucket();
+            this.logger.log('StorageService initialized with default bucket.');
         }
     }
 

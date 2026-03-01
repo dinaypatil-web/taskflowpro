@@ -30,6 +30,7 @@ export class FirestoreService implements OnModuleInit {
             const parsedAccount = JSON.parse(serviceAccount);
             admin.initializeApp({
                 credential: admin.credential.cert(parsedAccount),
+                storageBucket: `${parsedAccount.project_id}.firebasestorage.app`
             });
             this.logger.log(`Firebase initialized successfully for project: ${parsedAccount.project_id}`);
         } catch (error) {
