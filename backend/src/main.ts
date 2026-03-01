@@ -67,12 +67,14 @@ async function bootstrap() {
     origin: (origin, callback) => {
       const isLocalhost = !origin || origin.includes('localhost');
       const isVercel = origin?.endsWith('.vercel.app');
+      const isRailway = origin?.endsWith('.railway.app');
       const isAllowedOrigin = origin === frontendUrl;
 
-      if (isLocalhost || isVercel || isAllowedOrigin) {
+      if (isLocalhost || isVercel || isRailway || isAllowedOrigin) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        logger.error(`CORS Blocked: Origin ${origin} is not allowed. Frontend URL: ${frontendUrl}`);
+        callback(new Error(`Not allowed by CORS: ${origin}`));
       }
     },
     credentials: true,
