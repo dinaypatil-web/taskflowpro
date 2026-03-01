@@ -13,6 +13,7 @@ import { calendarApi } from '@/lib/api/calendar'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AuthProtectedPage } from '@/components/ClientOnly'
+import toast from 'react-hot-toast'
 import {
   ChevronLeft,
   ChevronRight,
@@ -38,8 +39,11 @@ function CalendarPageContent() {
   const { isAuthenticated } = useAuthStore()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
+  const [quickAddDate, setQuickAddDate] = useState<string | null>(null)
+  const [quickAddTitle, setQuickAddTitle] = useState('')
+  const [isSubmittingQuickAdd, setIsSubmittingQuickAdd] = useState(false)
 
-  const { data: monthData, isLoading } = useQuery(
+  const { data: monthData, isLoading, refetch } = useQuery(
     ['calendar-month', currentDate.getMonth() + 1, currentDate.getFullYear()],
     () => {
       return calendarApi.getMonthView(
@@ -49,6 +53,30 @@ function CalendarPageContent() {
     },
     { enabled: isAuthenticated }
   )
+
+  const handleQuickAdd = async (date: Date) => {
+    if (!quickAddTitle.trim()) {
+      setQuickAddDate(null)
+      return
+    }
+
+    setIsSubmittingQuickAdd(true)
+    try {
+      await tasksApi.createTask({
+        title: quickAddTitle,
+        dueDate: new Date(date).toISOString(),
+        priority: 'MEDIUM',
+      })
+      toast.success('Task added!')
+      setQuickAddTitle('')
+      setQuickAddDate(null)
+      refetch()
+    } catch (error) {
+      toast.error('Failed to add task')
+    } finally {
+      setIsSubmittingQuickAdd(false)
+    }
+  }
 
   if (!isAuthenticated) {
     router.push('/auth/login')
@@ -225,6 +253,37 @@ function CalendarPageContent() {
                     </div>
 
                     <div className="space-y-1">
+                      {quickAddDate === day.toISOString() ? (
+                        <div className="mt-1">
+                          <input
+                            autoFocus
+                            type="text"
+                            value={quickAddTitle}
+                            onChange={(e) => setQuickAddTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleQuickAdd(day)
+                              if (e.key === 'Escape') {
+                                setQuickAddDate(null)
+                                setQuickAddTitle('')
+                              }
+                            }}
+                            onBlur={() => {
+                              if (!quickAddTitle.trim()) setQuickAddDate(null)
+                            }}
+                            disabled={isSubmittingQuickAdd}
+                            placeholder="Type title..."
+                            className="w-full p-1 text-[10px] border border-primary-300 rounded focus:ring-1 focus:ring-primary-500 outline-none"
+                          />
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setQuickAddDate(day.toISOString())}
+                          className="w-full text-left p-1 text-[10px] text-gray-400 hover:bg-gray-100 rounded italic opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          + Quick add
+                        </button>
+                      )}
+
                       {dayEvents.slice(0, 3).map((event: any) => {
                         const taskPayload = event.task || event
                         const delayed = isTaskDelayed(taskPayload)

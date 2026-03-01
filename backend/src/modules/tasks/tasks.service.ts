@@ -37,6 +37,7 @@ export class TasksService {
       voiceMetadata: null,
       isDeleted: false,
       startDate: taskData.startDate ? new Date(taskData.startDate) : now,
+      dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
       attachments: taskData.attachments || [],
       createdAt: now,
       updatedAt: now,
@@ -76,6 +77,8 @@ export class TasksService {
       isVoiceCreated: true,
       voiceMetadata: voiceMetadata ? JSON.stringify(voiceMetadata) : null,
       isDeleted: false,
+      startDate: taskData.startDate ? new Date(taskData.startDate) : now,
+      dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
       createdAt: now,
       updatedAt: now,
     };
@@ -217,6 +220,13 @@ export class TasksService {
       ...taskData,
       updatedAt: new Date(),
     };
+
+    if (taskData.startDate) {
+      updatePayload.startDate = new Date(taskData.startDate);
+    }
+    if (taskData.dueDate) {
+      updatePayload.dueDate = new Date(taskData.dueDate);
+    }
 
     if (taskData.status === 'COMPLETED') {
       updatePayload.completedAt = new Date();

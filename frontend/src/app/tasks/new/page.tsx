@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -27,6 +27,14 @@ const taskSchema = z.object({
 type TaskFormData = z.infer<typeof taskSchema>
 
 export default function NewTaskPage() {
+  return (
+    <Suspense fallback={<DashboardLayout><div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div></DashboardLayout>}>
+      <NewTaskPageContent />
+    </Suspense>
+  )
+}
+
+function NewTaskPageContent() {
   const router = useRouter()
   const queryParams = useSearchParams()
   const queryClient = useQueryClient()
