@@ -1,21 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from 'react-query'
 import { stakeholdersApi, CreateStakeholderRequest } from '@/lib/api/stakeholders'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { X, User, Mail, Phone, Building } from 'lucide-react'
+import { X, User, Mail, Phone, Building, Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Stakeholder } from '@/types/task'
 
 const stakeholderSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
-    email: z.string().email('Invalid email').optional().or(z.literal('')),
-    phone: z.string().optional(),
+    emails: z.array(z.object({ value: z.string().email('Invalid email').or(z.literal('')) })),
+    phones: z.array(z.object({ value: z.string() })),
     organization: z.string().optional(),
 })
 
@@ -32,9 +32,24 @@ export function QuickCreateStakeholder({ onSuccess, onClose }: QuickCreateStakeh
     const {
         register,
         handleSubmit,
+        control,
         formState: { errors },
     } = useForm<StakeholderFormData>({
         resolver: zodResolver(stakeholderSchema),
+        defaultValues: {
+            emails: [{ value: '' }],
+            phones: [{ value: '' }],
+        }
+    })
+
+    const { fields: emailFields, append: appendEmail, remove: removeEmail } = useFieldArray({
+        control,
+        name: "emails"
+    })
+
+    const { fields: phoneFields, append: appendPhone, remove: removePhone } = useFieldArray({
+        control,
+        name: "phones"
     })
 
     const createMutation = useMutation(
@@ -56,8 +71,8 @@ export function QuickCreateStakeholder({ onSuccess, onClose }: QuickCreateStakeh
     const onSubmit = (data: StakeholderFormData) => {
         createMutation.mutate({
             ...data,
-            email: data.email || undefined,
-            phone: data.phone || undefined,
+            emails: data.emails.map(e => e.value).filter(Boolean),
+            phones: data.phones.map(p => p.value).filter(Boolean),
             organization: data.organization || undefined,
         })
     }
@@ -106,37 +121,78 @@ export function QuickCreateStakeholder({ onSuccess, onClose }: QuickCreateStakeh
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
-                    </label>
-                    <div className="relative">
-                        <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                        <input
-                            type="email"
-                            {...register('email')}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
-                            placeholder="john@example.com"
-                        />
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Emails
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => appendEmail({ value: '' })}
+                            className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center"
+                        >
+                            <Plus className="h-3 w-3 mr-1" /> Add Email
+                        </button>
                     </div>
-                    {errors.email && (
-                        <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
-                    )}
+                    {emailFields.map((field, index) => (
+                        <div key={field.id} className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                <input
+                                    type="email"
+                                    {...register(`emails.${index}.value` as const)}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
+                                    placeholder="john@example.com"
+                                />
+                            </div>
+                            {emailFields.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => removeEmail(index)}
+                                    className="p-2 text-gray-400 hover:text-red-500"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone
-                    </label>
-                    <div className="relative">
-                        <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                        <input
-                            type="tel"
-                            {...register('phone')}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
-                            placeholder="+1 234 567 890"
-                        />
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Phone Numbers
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => appendPhone({ value: '' })}
+                            className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center"
+                        >
+                            <Plus className="h-3 w-3 mr-1" /> Add Phone
+                        </button>
                     </div>
+                    {phoneFields.map((field, index) => (
+                        <div key={field.id} className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                <input
+                                    type="tel"
+                                    {...register(`phones.${index}.value` as const)}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
+                                    placeholder="+1 234 567 890"
+                                />
+                            </div>
+                            {phoneFields.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => removePhone(index)}
+                                    className="p-2 text-gray-400 hover:text-red-500"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
                 </div>
 
                 <div>

@@ -13,8 +13,8 @@ export interface DeviceContact {
 export interface ParsedContact {
   firstName: string
   lastName: string
-  phone?: string
-  email?: string
+  emails?: string[]
+  phones?: string[]
   organization?: string
 }
 
@@ -43,7 +43,7 @@ export const useContacts = () => {
 
     try {
       setIsLoading(true)
-      
+
       // Request contacts with specific properties
       const contacts = await (navigator as any).contacts.select([
         'name',
@@ -61,8 +61,8 @@ export const useContacts = () => {
         return {
           firstName,
           lastName,
-          phone: contact.tel?.[0],
-          email: contact.email?.[0],
+          emails: contact.email,
+          phones: contact.tel?.map(t => t.replace(/[\s-()]/g, '')),
           organization: contact.org?.[0],
         }
       }).filter((contact: ParsedContact) => contact.firstName || contact.lastName)
@@ -86,8 +86,8 @@ export const useContacts = () => {
   const saveToContacts = useCallback(async (stakeholder: {
     firstName: string
     lastName: string
-    phone?: string
-    email?: string
+    emails?: string[]
+    phones?: string[]
     organization?: string
   }): Promise<boolean> => {
     if (!isSupported) {
@@ -104,12 +104,12 @@ export const useContacts = () => {
         name: [`${stakeholder.firstName} ${stakeholder.lastName}`.trim()],
       }
 
-      if (stakeholder.phone) {
-        contactData.tel = [stakeholder.phone]
+      if (stakeholder.phones && stakeholder.phones.length > 0) {
+        contactData.tel = stakeholder.phones
       }
 
-      if (stakeholder.email) {
-        contactData.email = [stakeholder.email]
+      if (stakeholder.emails && stakeholder.emails.length > 0) {
+        contactData.email = stakeholder.emails
       }
 
       if (stakeholder.organization) {
@@ -135,8 +135,8 @@ export const useContacts = () => {
   const generateVCard = useCallback((stakeholder: {
     firstName: string
     lastName: string
-    phone?: string
-    email?: string
+    emails?: string[]
+    phones?: string[]
     organization?: string
   }) => {
     const vCard = [
@@ -144,8 +144,8 @@ export const useContacts = () => {
       'VERSION:3.0',
       `FN:${stakeholder.firstName} ${stakeholder.lastName}`,
       `N:${stakeholder.lastName};${stakeholder.firstName};;;`,
-      stakeholder.phone ? `TEL:${stakeholder.phone}` : '',
-      stakeholder.email ? `EMAIL:${stakeholder.email}` : '',
+      ...(stakeholder.phones || []).map(p => `TEL:${p}`),
+      ...(stakeholder.emails || []).map(e => `EMAIL:${e}`),
       stakeholder.organization ? `ORG:${stakeholder.organization}` : '',
       'END:VCARD'
     ].filter(Boolean).join('\n')
@@ -173,7 +173,7 @@ export const useContacts = () => {
 
     try {
       setIsLoading(true)
-      
+
       const contacts = await (navigator as any).contacts.select([
         'name',
         'tel',
@@ -194,8 +194,8 @@ export const useContacts = () => {
       const parsedContact: ParsedContact = {
         firstName,
         lastName,
-        phone: contact.tel?.[0],
-        email: contact.email?.[0],
+        emails: contact.email,
+        phones: contact.tel?.map((t: string) => t.replace(/[\s-()]/g, '')),
         organization: contact.org?.[0],
       }
 

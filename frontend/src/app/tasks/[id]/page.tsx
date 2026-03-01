@@ -359,14 +359,14 @@ function TaskDetailsContent({ id }: { id: string }) {
                                                 {ts.stakeholder.firstName} {ts.stakeholder.lastName}
                                             </p>
                                             <p className="text-xs text-gray-500 truncate">
-                                                {ts.stakeholder.email || ts.stakeholder.organization || 'Stakeholder'}
+                                                {ts.stakeholder.emails?.[0] || ts.stakeholder.email || ts.stakeholder.organization || 'Stakeholder'}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0 ml-2">
-                                            {ts.stakeholder.phone && (
+                                            {(ts.stakeholder.phones?.[0] || ts.stakeholder.phone) && (
                                                 <>
                                                     <a
-                                                        href={`tel:${ts.stakeholder.phone.replace(/\s+/g, '')}`}
+                                                        href={`tel:${(ts.stakeholder.phones?.[0] || ts.stakeholder.phone).replace(/\s+/g, '')}`}
                                                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-100"
                                                         title="Call Stakeholder"
                                                         onClick={(e) => e.stopPropagation()}
@@ -374,7 +374,7 @@ function TaskDetailsContent({ id }: { id: string }) {
                                                         <Phone className="h-4 w-4" />
                                                     </a>
                                                     <a
-                                                        href={`https://wa.me/${ts.stakeholder.phone.replace(/[^0-9]/g, '')}`}
+                                                        href={`https://wa.me/${(ts.stakeholder.phones?.[0] || ts.stakeholder.phone).replace(/[^0-9]/g, '')}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors border border-primary-100"

@@ -111,8 +111,8 @@ function StakeholderDetailsContent({ id }: { id: string }) {
                             stakeholder={{
                                 firstName: stakeholder.firstName,
                                 lastName: stakeholder.lastName,
-                                email: stakeholder.email,
-                                phone: stakeholder.phone,
+                                email: stakeholder.emails?.[0] || stakeholder.email,
+                                phone: stakeholder.phones?.[0] || stakeholder.phone,
                                 organization: stakeholder.organization,
                             }}
                         />
@@ -163,29 +163,56 @@ function StakeholderDetailsContent({ id }: { id: string }) {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
-                                <a
-                                    href={`mailto:${stakeholder.email}`}
-                                    className={`flex items-center p-3 rounded-xl border-2 transition-all ${stakeholder.email ? 'border-primary-100 bg-primary-50 hover:bg-primary-100' : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'}`}
-                                >
-                                    <Mail className="h-5 w-5 text-primary-500 mr-3" />
-                                    <div className="flex-1 min-w-0 text-left">
-                                        <p className="text-[10px] font-black tracking-widest text-primary-400 uppercase">Email Address</p>
-                                        <p className="text-sm font-bold text-gray-900 truncate">{stakeholder.email || 'Not provided'}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {(stakeholder.emails?.length ? stakeholder.emails : (stakeholder.email ? [stakeholder.email] : [])).map((email: string, index: number) => (
+                                    <a
+                                        key={`email-${index}`}
+                                        href={`mailto:${email}`}
+                                        className="flex items-center p-3 rounded-xl border-2 border-primary-100 bg-primary-50 hover:bg-primary-100 transition-all"
+                                    >
+                                        <Mail className="h-5 w-5 text-primary-500 mr-3" />
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className="text-[10px] font-black tracking-widest text-primary-400 uppercase">Email Address {index > 0 ? `#${index + 1}` : ''}</p>
+                                            <p className="text-sm font-bold text-gray-900 truncate">{email}</p>
+                                        </div>
+                                        <ExternalLink className="h-3 w-3 text-primary-300" />
+                                    </a>
+                                ))}
+
+                                {(stakeholder.phones?.length ? stakeholder.phones : (stakeholder.phone ? [stakeholder.phone] : [])).map((phone: string, index: number) => (
+                                    <a
+                                        key={`phone-${index}`}
+                                        href={`tel:${phone}`}
+                                        className="flex items-center p-3 rounded-xl border-2 border-green-100 bg-green-50 hover:bg-green-100 transition-all"
+                                    >
+                                        <Phone className="h-5 w-5 text-green-500 mr-3" />
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className="text-[10px] font-black tracking-widest text-green-400 uppercase">Phone Number {index > 0 ? `#${index + 1}` : ''}</p>
+                                            <p className="text-sm font-bold text-gray-900 truncate">{phone}</p>
+                                        </div>
+                                        <ExternalLink className="h-3 w-3 text-green-300" />
+                                    </a>
+                                ))}
+
+                                {!(stakeholder.emails?.length || stakeholder.email) && (
+                                    <div className="flex items-center p-3 rounded-xl border-2 border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed">
+                                        <Mail className="h-5 w-5 text-gray-400 mr-3" />
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className="text-[10px] font-black tracking-widest text-gray-400 uppercase">Email Address</p>
+                                            <p className="text-sm font-bold text-gray-900 truncate">Not provided</p>
+                                        </div>
                                     </div>
-                                    {stakeholder.email && <ExternalLink className="h-3 w-3 text-primary-300" />}
-                                </a>
-                                <a
-                                    href={`tel:${stakeholder.phone}`}
-                                    className={`flex items-center p-3 rounded-xl border-2 transition-all ${stakeholder.phone ? 'border-green-100 bg-green-50 hover:bg-green-100' : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'}`}
-                                >
-                                    <Phone className="h-5 w-5 text-green-500 mr-3" />
-                                    <div className="flex-1 min-w-0 text-left">
-                                        <p className="text-[10px] font-black tracking-widest text-green-400 uppercase">Phone Number</p>
-                                        <p className="text-sm font-bold text-gray-900 truncate">{stakeholder.phone || 'Not provided'}</p>
+                                )}
+
+                                {!(stakeholder.phones?.length || stakeholder.phone) && (
+                                    <div className="flex items-center p-3 rounded-xl border-2 border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed">
+                                        <Phone className="h-5 w-5 text-gray-400 mr-3" />
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className="text-[10px] font-black tracking-widest text-gray-400 uppercase">Phone Number</p>
+                                            <p className="text-sm font-bold text-gray-900 truncate">Not provided</p>
+                                        </div>
                                     </div>
-                                    {stakeholder.phone && <ExternalLink className="h-3 w-3 text-green-300" />}
-                                </a>
+                                )}
                             </div>
                         </div>
                     </div>

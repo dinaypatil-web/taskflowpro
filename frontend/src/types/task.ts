@@ -54,6 +54,8 @@ export interface Stakeholder {
   lastName: string
   email?: string
   phone?: string
+  emails: string[]
+  phones: string[]
   organization?: string
   tags: string[]
   isActive: boolean

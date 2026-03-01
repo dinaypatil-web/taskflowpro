@@ -20,8 +20,8 @@ interface ParsedContact {
     id: string
     firstName: string
     lastName: string
-    email?: string
-    phone?: string
+    emails?: string[]
+    phones?: string[]
     selected: boolean
 }
 
@@ -62,12 +62,18 @@ export function ImportDeviceContacts({ onImportSuccess }: ImportDeviceContactsPr
 
             const parsed = contacts.map((c, index) => {
                 const { first, last } = parseName(c.name)
+                // Filter and sanitize emails and phones
+                const emails = (c.email || []).filter(Boolean)
+                const phones = (c.tel || [])
+                    .map(t => t.replace(/[\s-()]/g, ''))
+                    .filter(t => t.length > 5)
+
                 return {
                     id: `contact-${index}-${Date.now()}`,
                     firstName: first,
                     lastName: last,
-                    email: c.email?.[0] || undefined,
-                    phone: c.tel?.[0]?.replace(/\s/g, '') || undefined,
+                    emails: emails.length > 0 ? emails : undefined,
+                    phones: phones.length > 0 ? phones : undefined,
                     selected: true
                 }
             })
@@ -100,8 +106,8 @@ export function ImportDeviceContacts({ onImportSuccess }: ImportDeviceContactsPr
             const stakeholdersToCreate = selected.map(c => ({
                 firstName: c.firstName,
                 lastName: c.lastName,
-                email: c.email,
-                phone: c.phone,
+                emails: c.emails,
+                phones: c.phones,
                 tags: ['imported-mobile']
             }))
 
@@ -166,7 +172,8 @@ export function ImportDeviceContacts({ onImportSuccess }: ImportDeviceContactsPr
                                             {contact.firstName} {contact.lastName}
                                         </p>
                                         <p className="text-xs text-gray-500 truncate">
-                                            {contact.email || contact.phone || 'No contact info'}
+                                            {contact.emails?.[0] || contact.phones?.[0] || 'No contact info'}
+                                            {(contact.emails?.length || 0) + (contact.phones?.length || 0) > 1 && ' (+more)'}
                                         </p>
                                     </div>
                                     <div className={clsx(

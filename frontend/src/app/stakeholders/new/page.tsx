@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from 'react-query'
@@ -11,15 +11,15 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ContactPicker } from '@/components/contacts/ContactPicker'
 import { ParsedContact } from '@/hooks/useContacts'
-import { ArrowLeft, Plus, X, Users } from 'lucide-react'
+import { ArrowLeft, Plus, X, Users, Mail, Phone, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 const stakeholderSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
+  emails: z.array(z.object({ value: z.string().email('Invalid email').or(z.literal('')) })),
+  phones: z.array(z.object({ value: z.string() })),
   organization: z.string().optional(),
   tags: z.array(z.string()).optional(),
 })
@@ -36,14 +36,27 @@ export default function NewStakeholderPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setValue,
     reset,
   } = useForm<StakeholderFormData>({
     resolver: zodResolver(stakeholderSchema),
     defaultValues: {
+      emails: [{ value: '' }],
+      phones: [{ value: '' }],
       tags: [],
     },
+  })
+
+  const { fields: emailFields, append: appendEmail, remove: removeEmail } = useFieldArray({
+    control,
+    name: "emails"
+  })
+
+  const { fields: phoneFields, append: appendPhone, remove: removePhone } = useFieldArray({
+    control,
+    name: "phones"
   })
 
   const createMutation = useMutation(
@@ -65,10 +78,20 @@ export default function NewStakeholderPage() {
     // Populate form with contact data
     setValue('firstName', contact.firstName)
     setValue('lastName', contact.lastName)
-    if (contact.email) setValue('email', contact.email)
-    if (contact.phone) setValue('phone', contact.phone)
+    if (contact.email) {
+      reset({
+        ...stakeholderSchema.parse({
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          emails: [{ value: contact.email }],
+          phones: contact.phone ? [{ value: contact.phone }] : [{ value: '' }],
+          organization: contact.organization || '',
+          tags: tags,
+        }),
+      })
+    }
     if (contact.organization) setValue('organization', contact.organization)
-    
+
     setShowContactPicker(false)
     toast.success('Contact information imported successfully')
   }
@@ -77,8 +100,8 @@ export default function NewStakeholderPage() {
     createMutation.mutate({
       ...data,
       tags: tags.length > 0 ? tags : undefined,
-      email: data.email || undefined,
-      phone: data.phone || undefined,
+      emails: data.emails.map(e => e.value).filter(Boolean),
+      phones: data.phones.map(p => p.value).filter(Boolean),
       organization: data.organization || undefined,
     })
   }
@@ -167,35 +190,83 @@ export default function NewStakeholderPage() {
               )}
             </div>
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                {...register('email')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="Enter email address"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            {/* Emails */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">
+                  Emails
+                </label>
+                <button
+                  type="button"
+                  onClick={() => appendEmail({ value: '' })}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center"
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add Email
+                </button>
+              </div>
+              {emailFields.map((field, index) => (
+                <div key={field.id} className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <input
+                      type="email"
+                      {...register(`emails.${index}.value` as const)}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+                  {emailFields.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeEmail(index)}
+                      className="p-2 text-gray-400 hover:text-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {errors.emails && (
+                <p className="mt-1 text-sm text-red-600">{errors.emails.message}</p>
               )}
             </div>
 
-            {/* Phone */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                {...register('phone')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="Enter phone number"
-              />
+            {/* Phones */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">
+                  Phone Numbers
+                </label>
+                <button
+                  type="button"
+                  onClick={() => appendPhone({ value: '' })}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center"
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add Phone
+                </button>
+              </div>
+              {phoneFields.map((field, index) => (
+                <div key={field.id} className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      {...register(`phones.${index}.value` as const)}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
+                      placeholder="+1 234 567 890"
+                    />
+                  </div>
+                  {phoneFields.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePhone(index)}
+                      className="p-2 text-gray-400 hover:text-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
 
             {/* Organization */}
@@ -285,7 +356,7 @@ export default function NewStakeholderPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowContactPicker(false)} />
-            
+
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <ContactPicker
                 onContactSelect={handleContactSelect}

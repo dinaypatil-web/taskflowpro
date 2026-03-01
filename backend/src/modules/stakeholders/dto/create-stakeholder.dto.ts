@@ -22,16 +22,18 @@ export class CreateStakeholderDto {
   @MaxLength(50)
   lastName: string;
 
-  @ApiProperty({ example: 'john.doe@company.com', required: false })
+  @ApiProperty({ example: ['john.doe@company.com'], required: false })
   @IsOptional()
-  @IsEmail()
-  email?: string;
+  @IsArray()
+  @IsEmail({}, { each: true })
+  emails?: string[];
 
-  @ApiProperty({ example: '+1234567890', required: false })
+  @ApiProperty({ example: ['+1234567890'], required: false })
   @IsOptional()
-  @IsString()
-  @Matches(/^\+[1-9]\d{1,14}$/, { message: 'Phone must be in E.164 format' })
-  phone?: string;
+  @IsArray()
+  @IsString({ each: true })
+  @Matches(/^\+[1-9]\d{1,14}$/, { each: true, message: 'Phone must be in E.164 format' })
+  phones?: string[];
 
   @ApiProperty({ example: 'Acme Corporation', required: false })
   @IsOptional()
@@ -39,8 +41,8 @@ export class CreateStakeholderDto {
   @MaxLength(100)
   organization?: string;
 
-  @ApiProperty({ 
-    example: ['client', 'vip', 'project-manager'], 
+  @ApiProperty({
+    example: ['client', 'vip', 'project-manager'],
     required: false,
     description: 'Array of tags for categorizing the stakeholder'
   })

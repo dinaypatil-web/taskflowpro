@@ -24,6 +24,8 @@ export class StakeholdersService {
     const stakeholder = {
       ...stakeholderData,
       userId,
+      emails: stakeholderData.emails || [],
+      phones: stakeholderData.phones || [],
       tags: tags || [],
       isActive: true,
       createdAt: now,
@@ -51,20 +53,39 @@ export class StakeholdersService {
 
     existingSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      if (data.email) existingEmails.set(data.email.toLowerCase(), doc.id);
-      if (data.phone) existingPhones.set(data.phone.replace(/\s/g, ''), doc.id);
+      if (data.emails) {
+        data.emails.forEach(e => existingEmails.set(e.toLowerCase(), doc.id));
+      } else if (data.email) {
+        existingEmails.set(data.email.toLowerCase(), doc.id);
+      }
+
+      if (data.phones) {
+        data.phones.forEach(p => existingPhones.set(p.replace(/\s/g, ''), doc.id));
+      } else if (data.phone) {
+        existingPhones.set(data.phone.replace(/\s/g, ''), doc.id);
+      }
     });
 
     for (const dto of stakeholders) {
       const { tags, ...stakeholderData } = dto;
-      const normalizedEmail = stakeholderData.email?.toLowerCase();
-      const normalizedPhone = stakeholderData.phone?.replace(/\s/g, '');
+      const normalizedEmails = (stakeholderData.emails || []).map(e => e.toLowerCase());
+      const normalizedPhones = (stakeholderData.phones || []).map(p => p.replace(/\s/g, ''));
 
       let existingId = null;
-      if (normalizedEmail && existingEmails.has(normalizedEmail)) {
-        existingId = existingEmails.get(normalizedEmail);
-      } else if (normalizedPhone && existingPhones.has(normalizedPhone)) {
-        existingId = existingPhones.get(normalizedPhone);
+      for (const email of normalizedEmails) {
+        if (existingEmails.has(email)) {
+          existingId = existingEmails.get(email);
+          break;
+        }
+      }
+
+      if (!existingId) {
+        for (const phone of normalizedPhones) {
+          if (existingPhones.has(phone)) {
+            existingId = existingPhones.get(phone);
+            break;
+          }
+        }
       }
 
       if (existingId) {
@@ -83,6 +104,8 @@ export class StakeholdersService {
         const stakeholder = {
           ...stakeholderData,
           userId,
+          emails: stakeholderData.emails || [],
+          phones: stakeholderData.phones || [],
           tags: tags || [],
           isActive: true,
           createdAt: now,
@@ -262,12 +285,20 @@ export class StakeholdersService {
 
   async searchByContact(userId: string, contact: string) {
     // Firestore lacks complex OR, so we search by email and phone separately
-    const [emailSnapshot, phoneSnapshot] = await Promise.all([
+    // Search in both legacy single fields and new array fields
+    const [emailSnapshot, phoneSnapshot, emailsArraySnapshot, phonesArraySnapshot] = await Promise.all([
       this.stakeholdersCollection.where('userId', '==', userId).where('deletedAt', '==', null).where('email', '==', contact).limit(10).get(),
       this.stakeholdersCollection.where('userId', '==', userId).where('deletedAt', '==', null).where('phone', '==', contact).limit(10).get(),
+      this.stakeholdersCollection.where('userId', '==', userId).where('deletedAt', '==', null).where('emails', 'array-contains', contact).limit(10).get(),
+      this.stakeholdersCollection.where('userId', '==', userId).where('deletedAt', '==', null).where('phones', 'array-contains', contact).limit(10).get(),
     ]);
 
-    const results = [...emailSnapshot.docs, ...phoneSnapshot.docs].map(doc => ({ id: doc.id, ...doc.data() }));
+    const results = [
+      ...emailSnapshot.docs,
+      ...phoneSnapshot.docs,
+      ...emailsArraySnapshot.docs,
+      ...phonesArraySnapshot.docs
+    ].map(doc => ({ id: doc.id, ...doc.data() }));
     // Deduplicate by ID
     return Array.from(new Map(results.map(item => [item.id, item])).values());
   }

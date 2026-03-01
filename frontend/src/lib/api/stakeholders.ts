@@ -4,8 +4,8 @@ import { Stakeholder } from '@/types/task'
 export interface CreateStakeholderRequest {
   firstName: string
   lastName: string
-  email?: string
-  phone?: string
+  emails?: string[]
+  phones?: string[]
   organization?: string
   tags?: string[]
 }
@@ -13,8 +13,8 @@ export interface CreateStakeholderRequest {
 export interface UpdateStakeholderRequest {
   firstName?: string
   lastName?: string
-  email?: string
-  phone?: string
+  emails?: string[]
+  phones?: string[]
   organization?: string
   tags?: string[]
 }

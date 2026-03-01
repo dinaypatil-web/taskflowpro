@@ -223,16 +223,22 @@ function StakeholdersPageContent() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="space-y-1">
-                            {stakeholder.email && (
+                            {(stakeholder.emails?.[0] || stakeholder.email) && (
                               <div className="flex items-center text-sm text-gray-600">
                                 <Mail className="h-3 w-3 mr-1" />
-                                {stakeholder.email}
+                                {stakeholder.emails?.[0] || stakeholder.email}
+                                {stakeholder.emails && stakeholder.emails.length > 1 && (
+                                  <span className="ml-1 text-[10px] bg-gray-100 px-1 rounded">+{stakeholder.emails.length - 1}</span>
+                                )}
                               </div>
                             )}
-                            {stakeholder.phone && (
+                            {(stakeholder.phones?.[0] || stakeholder.phone) && (
                               <div className="flex items-center text-sm text-gray-600">
                                 <Phone className="h-3 w-3 mr-1" />
-                                {stakeholder.phone}
+                                {stakeholder.phones?.[0] || stakeholder.phone}
+                                {stakeholder.phones && stakeholder.phones.length > 1 && (
+                                  <span className="ml-1 text-[10px] bg-gray-100 px-1 rounded">+{stakeholder.phones.length - 1}</span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -266,8 +272,8 @@ function StakeholdersPageContent() {
                               stakeholder={{
                                 firstName: stakeholder.firstName,
                                 lastName: stakeholder.lastName,
-                                email: stakeholder.email,
-                                phone: stakeholder.phone,
+                                email: stakeholder.emails?.[0] || stakeholder.email,
+                                phone: stakeholder.phones?.[0] || stakeholder.phone,
                                 organization: stakeholder.organization,
                               }}
                             />
@@ -316,16 +322,22 @@ function StakeholdersPageContent() {
                             {stakeholder.firstName} {stakeholder.lastName}
                           </Link>
                           <div className="mt-1 space-y-1">
-                            {stakeholder.email && (
+                            {(stakeholder.emails?.[0] || stakeholder.email) && (
                               <div className="flex items-center text-xs text-gray-600">
                                 <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
-                                <span className="truncate">{stakeholder.email}</span>
+                                <span className="truncate">
+                                  {stakeholder.emails?.[0] || stakeholder.email}
+                                  {stakeholder.emails && stakeholder.emails.length > 1 && ` (+${stakeholder.emails.length - 1})`}
+                                </span>
                               </div>
                             )}
-                            {stakeholder.phone && (
+                            {(stakeholder.phones?.[0] || stakeholder.phone) && (
                               <div className="flex items-center text-xs text-gray-600">
                                 <Phone className="h-3 w-3 mr-1 flex-shrink-0" />
-                                <span>{stakeholder.phone}</span>
+                                <span>
+                                  {stakeholder.phones?.[0] || stakeholder.phone}
+                                  {stakeholder.phones && stakeholder.phones.length > 1 && ` (+${stakeholder.phones.length - 1})`}
+                                </span>
                               </div>
                             )}
                             {stakeholder.organization && (
@@ -360,8 +372,8 @@ function StakeholdersPageContent() {
                               stakeholder={{
                                 firstName: stakeholder.firstName,
                                 lastName: stakeholder.lastName,
-                                email: stakeholder.email,
-                                phone: stakeholder.phone,
+                                email: stakeholder.emails?.[0] || stakeholder.email,
+                                phone: stakeholder.phones?.[0] || stakeholder.phone,
                                 organization: stakeholder.organization,
                               }}
                               className="text-xs"
