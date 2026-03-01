@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from 'react-query'
 import { useAuthStore } from '@/store/authStore'
 import { tasksApi } from '@/lib/api/tasks'
+import { calendarApi } from '@/lib/api/calendar'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AuthProtectedPage } from '@/components/ClientOnly'
@@ -38,27 +39,13 @@ function CalendarPageContent() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
 
-  const { data: tasks, isLoading } = useQuery(
-    ['calendar-tasks', currentDate.getMonth(), currentDate.getFullYear()],
+  const { data: monthData, isLoading } = useQuery(
+    ['calendar-month', currentDate.getMonth() + 1, currentDate.getFullYear()],
     () => {
-      // Helper to format date as YYYY-MM-DD in LOCAL time
-      const toLocalISOString = (date: Date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
-      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0); // Last day of next month
-
-      return tasksApi.getTasks({
-        dueDateFrom: toLocalISOString(start),
-        dueDateTo: toLocalISOString(end),
-        limit: 1000,
-        sortBy: 'dueDate',
-        sortOrder: 'asc'
-      });
+      return calendarApi.getMonthView(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1
+      );
     },
     { enabled: isAuthenticated }
   )
@@ -91,28 +78,11 @@ function CalendarPageContent() {
     return days
   }
 
-  const getTasksForDate = (date: Date) => {
-    if (!tasks?.tasks) return []
+  const getEventsForDate = (date: Date) => {
+    if (!monthData?.events) return []
 
-    const targetDate = new Date(date)
-    targetDate.setHours(0, 0, 0, 0)
-
-    return tasks.tasks.filter(task => {
-      const start = task.startDate ? new Date(task.startDate) : new Date(task.createdAt)
-      start.setHours(0, 0, 0, 0)
-
-      let end: Date
-      if (task.status === 'COMPLETED' && task.completedAt) {
-        end = new Date(task.completedAt)
-      } else if (task.dueDate) {
-        end = new Date(task.dueDate)
-      } else {
-        end = new Date() // Still active
-      }
-      end.setHours(23, 59, 59, 999)
-
-      return targetDate >= start && targetDate <= end
-    })
+    const dateKey = date.toISOString().split('T')[0]
+    return monthData.events[dateKey] || []
   }
 
   const isTaskDelayed = (task: any) => {
@@ -228,7 +198,7 @@ function CalendarPageContent() {
                   return <div key={index} className="p-3 bg-gray-50"></div>
                 }
 
-                const dayTasks = getTasksForDate(day)
+                const dayEvents = getEventsForDate(day)
                 const isToday =
                   day.getDate() === new Date().getDate() &&
                   day.getMonth() === new Date().getMonth() &&
@@ -246,28 +216,30 @@ function CalendarPageContent() {
                     </div>
 
                     <div className="space-y-1">
-                      {dayTasks.slice(0, 3).map((task) => {
-                        const delayed = isTaskDelayed(task)
+                      {dayEvents.slice(0, 3).map((event: any) => {
+                        const taskPayload = event.task || event
+                        const delayed = isTaskDelayed(taskPayload)
+                        const id = event.taskId || event.id
                         return (
                           <Link
-                            key={task.id}
-                            href={`/tasks/${task.id}`}
+                            key={event.id}
+                            href={`/tasks/${id}`}
                             className={`block p-1 rounded text-[10px] sm:text-xs truncate transition-all border ${delayed
                               ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                              : `${getPriorityColor(task.priority)} border-transparent hover:opacity-80`
+                              : `${getPriorityColor(taskPayload.priority)} border-transparent hover:opacity-80`
                               }`}
                           >
                             <div className="flex items-center">
                               {delayed && <AlertCircle className="h-2 w-2 mr-1 flex-shrink-0" />}
-                              <span className="truncate">{task.title}</span>
+                              <span className="truncate">{event.title}</span>
                             </div>
                           </Link>
                         )
                       })}
 
-                      {dayTasks.length > 3 && (
+                      {dayEvents.length > 3 && (
                         <div className="text-[10px] text-gray-500 text-center">
-                          +{dayTasks.length - 3} more
+                          +{dayEvents.length - 3} more
                         </div>
                       )}
                     </div>
@@ -289,54 +261,52 @@ function CalendarPageContent() {
               <div className="flex justify-center py-8">
                 <LoadingSpinner size="md" />
               </div>
-            ) : tasks?.tasks && tasks.tasks.length > 0 ? (
+            ) : Object.values(monthData?.events || {}).flat().length > 0 ? (
               <div className="space-y-4">
-                {tasks.tasks.slice(0, 5).map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-gray-900 truncate">
-                        {task.title}
-                      </h4>
-                      <div className="mt-1 flex items-center space-x-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                          {formatStatus(task.status)}
-                        </span>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                          {task.priority}
-                        </span>
-                        {isTaskDelayed(task) && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            Delayed
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 flex items-center space-x-4 text-xs text-gray-500">
-                        {task.dueDate && (
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            Due {formatDate(task.dueDate)}
-                          </div>
-                        )}
-                        {task.taskStakeholders && task.taskStakeholders.length > 0 && (
-                          <div className="flex items-center">
-                            <User className="h-3 w-3 mr-1" />
-                            {task.taskStakeholders.length} stakeholder{task.taskStakeholders.length > 1 ? 's' : ''}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <Link
-                      href={`/tasks/${task.id}`}
-                      className="ml-4 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                {Object.values(monthData?.events || {}).flat().slice(0, 5).map((event: any) => {
+                  const taskPayload = event.task || event
+                  const id = event.taskId || event.id
+                  return (
+                    <div
+                      key={event.id}
+                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
                     >
-                      View
-                    </Link>
-                  </div>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-900 truncate">
+                          {event.title}
+                        </h4>
+                        <div className="mt-1 flex items-center space-x-2">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(taskPayload.status)}`}>
+                            {formatStatus(taskPayload.status)}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(taskPayload.priority)}`}>
+                            {taskPayload.priority}
+                          </span>
+                          {isTaskDelayed(taskPayload) && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Delayed
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 flex items-center space-x-4 text-xs text-gray-500">
+                          {event.startDate && (
+                            <div className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Due {formatDate(event.startDate)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <Link
+                        href={`/tasks/${id}`}
+                        className="ml-4 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                      >
+                        View
+                      </Link>
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-8">

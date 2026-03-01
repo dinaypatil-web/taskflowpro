@@ -6,11 +6,14 @@ import { TaskQueryDto } from './dto/task-query.dto';
 import { VoiceTaskDto } from './dto/voice-task.dto';
 import { StorageService } from '../../shared/storage/storage.service';
 
+import { CalendarService } from '../calendar/calendar.service';
+
 @Injectable()
 export class TasksService {
   constructor(
     private firestore: FirestoreService,
     private storage: StorageService,
+    private calendar: CalendarService,
   ) { }
 
   private get tasksCollection() {
@@ -40,6 +43,10 @@ export class TasksService {
     };
 
     await this.firestore.setDoc('tasks', taskRef.id, task);
+
+    if (task.dueDate) {
+      await this.calendar.syncTaskToCalendar(userId, taskRef.id);
+    }
 
     if (stakeholderIds?.length) {
       const batch = this.firestore.getDb().batch();
@@ -74,6 +81,10 @@ export class TasksService {
     };
 
     await this.firestore.setDoc('tasks', taskRef.id, task);
+
+    if (task.dueDate) {
+      await this.calendar.syncTaskToCalendar(userId, taskRef.id);
+    }
 
     if (stakeholderIds?.length) {
       const batch = this.firestore.getDb().batch();
@@ -212,6 +223,10 @@ export class TasksService {
     }
 
     await taskRef.update(updatePayload);
+
+    if (updatePayload.dueDate) {
+      await this.calendar.syncTaskToCalendar(userId, id);
+    }
 
     if (stakeholderIds !== undefined) {
       const existingMappings = await this.taskStakeholdersCollection.where('taskId', '==', id).get();
