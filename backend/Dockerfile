@@ -28,8 +28,8 @@ RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nestjs -u 1001
 
 # Copy built application and install production-only deps
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
+COPY --from=builder --chown=nestjs:nodejs /app/backend/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/backend/package*.json ./
 RUN npm install --only=production && npm cache clean --force
 
 # Create logs directory
