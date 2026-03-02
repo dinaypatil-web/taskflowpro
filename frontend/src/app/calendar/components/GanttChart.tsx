@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { getPriorityColor, isValidDate } from '@/lib/utils'
+import { getPriorityColor, getPrioritySolidColor, isValidDate } from '@/lib/utils'
 import { AlertCircle } from 'lucide-react'
 
 interface GanttChartProps {
@@ -111,7 +111,7 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                                 <Link
                                                     href={`/tasks/${id}`}
                                                     style={{ left: pos.left, width: pos.width }}
-                                                    className={`absolute h-6 flex items-center px-2 rounded-full text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md z-10 truncate ${getPriorityColor(taskPayload.priority)}`}
+                                                    className={`absolute h-6 flex items-center px-2 rounded-full text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md z-10 truncate ${getPrioritySolidColor(taskPayload.priority)}`}
                                                 >
                                                     <span className="truncate">{event.title}</span>
                                                     {event.status === 'COMPLETED' && <span className="ml-1">✓</span>}
@@ -133,8 +133,8 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
             <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex flex-wrap gap-4 text-[10px] text-gray-500">
                 <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-red-500 mr-1"></span> Urgent</div>
                 <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-orange-500 mr-1"></span> High</div>
-                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-blue-500 mr-1"></span> Medium</div>
-                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-gray-400 mr-1"></span> Low</div>
+                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-yellow-500 mr-1"></span> Medium</div>
+                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-green-500 mr-1"></span> Low</div>
             </div>
         </div>
     )

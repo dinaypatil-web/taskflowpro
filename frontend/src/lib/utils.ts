@@ -82,6 +82,22 @@ export function getPriorityColor(priority: string) {
   }
 }
 
+export function getPrioritySolidColor(priority: string) {
+  if (!priority) return 'bg-gray-400';
+  switch (priority.toLowerCase()) {
+    case 'low':
+      return 'bg-green-500'
+    case 'medium':
+      return 'bg-yellow-500'
+    case 'high':
+      return 'bg-orange-500'
+    case 'urgent':
+      return 'bg-red-500'
+    default:
+      return 'bg-gray-400'
+  }
+}
+
 export function formatStatus(status?: string) {
   if (!status) return 'Unknown';
   return status.replace('_', ' ').replace('-', ' ');
