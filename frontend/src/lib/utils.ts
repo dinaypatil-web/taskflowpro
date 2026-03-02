@@ -167,3 +167,31 @@ export function formatPhoneNumber(phone: string) {
   // Return original if not a standard format
   return phone
 }
+
+/**
+ * Normalizes a phone number to E.164 format (+1234567890)
+ * Strips non-digit characters except leading +
+ * Prepends + if missing and number seems to be a full number (10+ digits)
+ */
+export function normalizePhoneNumber(phone: string): string {
+  if (!phone) return ''
+
+  // Strip all non-digit characters
+  let cleaned = phone.replace(/\D/g, '')
+
+  if (!cleaned) return ''
+
+  // If it's a 10-digit number (common in US/India), prepend + prefix
+  // Note: This is an assumption, but helps with backend validation
+  if (cleaned.length === 10 && !phone.startsWith('+')) {
+    return `+${cleaned}`
+  }
+
+  // If it already had a plus, keep it
+  if (phone.trim().startsWith('+')) {
+    return `+${cleaned}`
+  }
+
+  // Otherwise just return the cleaned digits (backend might still complain if no +)
+  return cleaned.length >= 7 ? `+${cleaned}` : cleaned
+}

@@ -276,6 +276,9 @@ export class TasksService {
       updatedAt: new Date(),
     });
 
+    // Sync deletion with calendar
+    await this.calendar.removeByTaskId(userId, id);
+
     return { message: 'Task deleted successfully' };
   }
 

@@ -51,18 +51,18 @@ export class CalendarService {
       .filter(data => {
         // In-memory filter for the second half of the overlap: endDate >= queryStartDate
         if (!startDate) return true;
-        const eventEndDate = data.endDate?.toDate() || data.startDate?.toDate();
-        return eventEndDate >= new Date(startDate);
+        const eventEndDate = FirestoreService.safeToDate(data.endDate) || FirestoreService.safeToDate(data.startDate);
+        return eventEndDate && eventEndDate >= new Date(startDate);
       })
       .map(async (data) => {
         const taskDoc = data.taskId ? await this.firestore.collection('tasks').doc(data.taskId).get() : null;
         return {
           ...data,
           task: taskDoc?.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
-          startDate: data.startDate?.toDate(),
-          endDate: data.endDate?.toDate(),
-          createdAt: data.createdAt?.toDate(),
-          updatedAt: data.updatedAt?.toDate(),
+          startDate: FirestoreService.safeToDate(data.startDate),
+          endDate: FirestoreService.safeToDate(data.endDate),
+          createdAt: FirestoreService.safeToDate(data.createdAt),
+          updatedAt: FirestoreService.safeToDate(data.updatedAt),
         };
       }));
   }
@@ -81,10 +81,10 @@ export class CalendarService {
       id: eventDoc.id,
       ...data,
       task: taskDoc?.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
-      startDate: data.startDate?.toDate(),
-      endDate: data.endDate?.toDate(),
-      createdAt: data.createdAt?.toDate(),
-      updatedAt: data.updatedAt?.toDate(),
+      startDate: FirestoreService.safeToDate(data.startDate),
+      endDate: FirestoreService.safeToDate(data.endDate),
+      createdAt: FirestoreService.safeToDate(data.createdAt),
+      updatedAt: FirestoreService.safeToDate(data.updatedAt),
     };
   }
 
@@ -117,6 +117,25 @@ export class CalendarService {
 
     await eventRef.delete();
     return { message: 'Calendar event deleted successfully' };
+  }
+
+  async removeByTaskId(userId: string, taskId: string) {
+    const snapshot = await this.eventsCollection
+      .where('userId', '==', userId)
+      .where('taskId', '==', taskId)
+      .get();
+
+    if (snapshot.empty) {
+      return { message: 'No calendar events found for this task' };
+    }
+
+    const batch = this.firestore.getDb().batch();
+    snapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    return { message: `Deleted ${snapshot.size} calendar events` };
   }
 
   async getMonthView(userId: string, year: number, month: number) {
@@ -176,8 +195,15 @@ export class CalendarService {
   async syncTaskToCalendar(userId: string, taskId: string) {
     const taskDoc = await this.firestore.collection('tasks').doc(taskId).get();
 
-    if (!taskDoc.exists || taskDoc.data().userId !== userId || !taskDoc.data().dueDate) {
-      throw new NotFoundException('Task not found or has no due date');
+    if (!taskDoc.exists || taskDoc.data().userId !== userId) {
+      throw new NotFoundException('Task not found');
+    }
+
+    const task = taskDoc.data();
+
+    // If no dates, we can't sync to calendar
+    if (!task.startDate && !task.dueDate && !task.createdAt) {
+      return null;
     }
 
     const task = taskDoc.data();

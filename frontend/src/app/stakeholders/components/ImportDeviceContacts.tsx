@@ -5,6 +5,7 @@ import { Download, Loader2, Check, X, User } from 'lucide-react'
 import { stakeholdersApi } from '@/lib/api/stakeholders'
 import { toast } from 'react-hot-toast'
 import { clsx } from 'clsx'
+import { normalizePhoneNumber } from '@/lib/utils'
 
 interface ImportDeviceContactsProps {
     onImportSuccess: () => void
@@ -33,7 +34,7 @@ export function ImportDeviceContacts({ onImportSuccess }: ImportDeviceContactsPr
     const [showReview, setShowReview] = useState(false)
 
     useEffect(() => {
-        setIsSupported('contacts' in navigator && 'ContactsManager' in window)
+        setIsSupported('contacts' in navigator && !!(navigator as any).contacts?.select)
     }, [])
 
     const parseName = (nameArray: string[]) => {
@@ -52,7 +53,20 @@ export function ImportDeviceContacts({ onImportSuccess }: ImportDeviceContactsPr
         if (!isSupported) return
 
         try {
-            const props = ['name', 'email', 'tel']
+            let props = ['name', 'email', 'tel']
+
+            // Try to get actual supported properties if available
+            try {
+                // @ts-ignore
+                if (navigator.contacts?.getProperties) {
+                    // @ts-ignore
+                    const supportedProps = await navigator.contacts.getProperties()
+                    props = ['name', 'email', 'tel', 'org'].filter(p => supportedProps.includes(p))
+                }
+            } catch (e) {
+                console.warn('Could not get contact properties, using defaults', e)
+            }
+
             const opts = { multiple: true }
 
             // @ts-ignore
@@ -65,7 +79,7 @@ export function ImportDeviceContacts({ onImportSuccess }: ImportDeviceContactsPr
                 // Filter and sanitize emails and phones
                 const emails = (c.email || []).filter(Boolean)
                 const phones = (c.tel || [])
-                    .map(t => t.replace(/[\s-()]/g, ''))
+                    .map(t => normalizePhoneNumber(t))
                     .filter(t => t.length > 5)
 
                 return {

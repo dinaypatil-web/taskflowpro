@@ -52,11 +52,14 @@ export function ContactPicker({ onContactSelect, onClose }: ContactPickerProps) 
           Contact Access Not Available
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Contact import is not supported on this device or browser. You can still manually enter contact information.
+          Contact import is not natively supported by all browsers. On iOS, you can enable it in Settings &gt; Safari &gt; Advanced &gt; Feature Flags &gt; Contact Picker API.
         </p>
+        <div className="bg-amber-50 rounded-lg p-3 mb-4 text-xs text-amber-800 text-left">
+          <strong>Tip:</strong> For the best experience, use Chrome on Android or enable the experimental flag on iOS Safari.
+        </div>
         <button
           onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
         >
           Continue Manually
         </button>

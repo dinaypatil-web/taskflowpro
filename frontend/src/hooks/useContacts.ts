@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { normalizePhoneNumber } from '@/lib/utils'
 
 export interface DeviceContact {
   name?: string[]
@@ -24,8 +25,14 @@ export const useContacts = () => {
 
   // Check if Contacts API is supported
   const checkSupport = useCallback(() => {
-    const supported = 'contacts' in navigator && 'ContactsManager' in window
+    // navigator.contacts is the main indicator for the Contact Picker API
+    const supported = 'contacts' in navigator && !!(navigator as any).contacts?.select
     setIsSupported(supported)
+
+    if (!supported) {
+      console.log('Contact Picker API not detected or supported in this browser context.')
+    }
+
     return supported
   }, [])
 
@@ -34,23 +41,35 @@ export const useContacts = () => {
     checkSupport()
   }, [checkSupport])
 
+  // Get supported properties for the device
+  const getSupportedProperties = async (): Promise<string[]> => {
+    try {
+      if ('contacts' in navigator && (navigator as any).contacts.getProperties) {
+        return await (navigator as any).contacts.getProperties()
+      }
+    } catch (e) {
+      console.error('Error getting contact properties:', e)
+    }
+    // Fallback to basic properties if getProperties is not available
+    return ['name', 'email', 'tel']
+  }
+
   // Import contacts from device
   const importContacts = useCallback(async (): Promise<ParsedContact[]> => {
     if (!isSupported) {
-      toast.error('Contact access is not supported on this device')
+      toast.error('Contact access is not supported on this device/browser')
       return []
     }
 
     try {
       setIsLoading(true)
 
+      const supportedProps = await getSupportedProperties()
+      // Filter requested properties based on what's actually supported
+      const propsToRequest = ['name', 'tel', 'email', 'org'].filter(p => supportedProps.includes(p))
+
       // Request contacts with specific properties
-      const contacts = await (navigator as any).contacts.select([
-        'name',
-        'tel',
-        'email',
-        'org'
-      ], { multiple: true })
+      const contacts = await (navigator as any).contacts.select(propsToRequest, { multiple: true })
 
       const parsedContacts: ParsedContact[] = contacts.map((contact: DeviceContact) => {
         const fullName = contact.name?.[0] || ''
@@ -62,7 +81,7 @@ export const useContacts = () => {
           firstName,
           lastName,
           emails: contact.email,
-          phones: contact.tel?.map(t => t.replace(/[\s-()]/g, '')),
+          phones: contact.tel?.map(t => normalizePhoneNumber(t)).filter(Boolean),
           organization: contact.org?.[0],
         }
       }).filter((contact: ParsedContact) => contact.firstName || contact.lastName)
@@ -174,12 +193,10 @@ export const useContacts = () => {
     try {
       setIsLoading(true)
 
-      const contacts = await (navigator as any).contacts.select([
-        'name',
-        'tel',
-        'email',
-        'org'
-      ], { multiple: false })
+      const supportedProps = await getSupportedProperties()
+      const propsToRequest = ['name', 'tel', 'email', 'org'].filter(p => supportedProps.includes(p))
+
+      const contacts = await (navigator as any).contacts.select(propsToRequest, { multiple: false })
 
       if (contacts.length === 0) {
         return null
@@ -195,7 +212,7 @@ export const useContacts = () => {
         firstName,
         lastName,
         emails: contact.email,
-        phones: contact.tel?.map((t: string) => t.replace(/[\s-()]/g, '')),
+        phones: contact.tel?.map((t: string) => normalizePhoneNumber(t)).filter(Boolean),
         organization: contact.org?.[0],
       }
 

@@ -13,6 +13,7 @@ import { SaveToContacts } from '@/components/contacts/SaveToContacts'
 import { ArrowLeft, Plus, X, Trash2, Mail, Phone } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { normalizePhoneNumber } from '@/lib/utils'
 
 const stakeholderSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -116,7 +117,7 @@ export default function EditStakeholderPage({ params }: EditStakeholderPageProps
       ...data,
       tags: tags.length > 0 ? tags : undefined,
       emails: data.emails.map(e => e.value).filter(Boolean),
-      phones: data.phones.map(p => p.value).filter(Boolean),
+      phones: data.phones.map(p => normalizePhoneNumber(p.value)).filter(Boolean),
       organization: data.organization || undefined,
     })
   }
