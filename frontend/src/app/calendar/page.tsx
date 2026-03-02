@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatStatus, formatDate, getPriorityColor, getStatusColor, isValidDate } from '@/lib/utils'
+import { GanttChart } from './components/GanttChart'
 
 export default function CalendarPage() {
   return (
@@ -38,7 +39,7 @@ function CalendarPageContent() {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [view, setView] = useState<'month' | 'week' | 'day'>('month')
+  const [view, setView] = useState<'month' | 'week' | 'day' | 'gantt'>('month')
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null)
   const [quickAddTitle, setQuickAddTitle] = useState('')
   const [isSubmittingQuickAdd, setIsSubmittingQuickAdd] = useState(false)
@@ -232,7 +233,7 @@ function CalendarPageContent() {
                 Today
               </button>
               <div className="flex rounded-lg border border-gray-300 overflow-hidden w-full sm:w-auto">
-                {(['month', 'week', 'day'] as const).map((viewType) => (
+                {(['month', 'week', 'day', 'gantt'] as const).map((viewType) => (
                   <button
                     key={viewType}
                     onClick={() => setView(viewType)}
@@ -248,14 +249,19 @@ function CalendarPageContent() {
             </div>
           </div>
 
-          {/* Calendar Grid */}
+          {/* Calendar Views */}
           {isLoading ? (
             <div className="flex justify-center py-12">
               <LoadingSpinner size="lg" />
             </div>
+          ) : view === 'gantt' ? (
+            <GanttChart
+              currentDate={currentDate}
+              events={Object.values(monthData?.events || {}).flat()}
+            />
           ) : (
             <div className="grid grid-cols-7 gap-1">
-              {/* Day headers */}
+              {/* Month view grid... */}
               {dayNames.map((day) => (
                 <div
                   key={day}
