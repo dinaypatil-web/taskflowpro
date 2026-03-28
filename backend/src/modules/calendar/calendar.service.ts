@@ -206,7 +206,6 @@ export class CalendarService {
       return null;
     }
 
-    const task = taskDoc.data();
     const taskStartDate = task.startDate || task.createdAt;
     const taskEndDate = task.completedAt || task.dueDate || taskStartDate;
 
