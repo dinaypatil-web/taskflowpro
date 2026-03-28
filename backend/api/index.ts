@@ -2,11 +2,11 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import * as express from 'express';
+import express from 'express';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
-import * as compression from 'compression';
-import * as cookieParser from 'cookie-parser';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { FirestoreExceptionFilter } from '../src/shared/firestore/firestore-exception.filter';
 
 const expressApp = express();

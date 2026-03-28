@@ -5,8 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import helmet from 'helmet';
-import * as compression from 'compression';
-import * as cookieParser from 'cookie-parser';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
 import { FirestoreExceptionFilter } from './shared/firestore/firestore-exception.filter';
