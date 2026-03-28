@@ -30,24 +30,30 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
 
         const year = currentDate.getFullYear()
         const month = currentDate.getMonth()
-        const monthStart = new Date(year, month, 1)
-        const monthEnd = new Date(year, month + 1, 0)
 
         const start = new Date(event.startDate)
         const endDateVal = event.endDate || event.dueDate || event.startDate
         const end = new Date(endDateVal)
 
-        // Calculate start percentage
-        const startOffset = Math.max(0, (start.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24))
-        const startPercent = (Math.min(daysInMonth, startOffset) / daysInMonth) * 100
+        // Use local date day numbers to avoid UTC/timezone drift
+        const getLocalDay = (d: Date, fallback: 'start' | 'end') => {
+            if (d.getFullYear() === year && d.getMonth() === month) {
+                return d.getDate()
+            }
+            return fallback === 'start' ? 1 : daysInMonth
+        }
 
-        // Calculate width percentage
-        const clampedStart = new Date(Math.max(monthStart.getTime(), start.getTime()))
-        const clampedEnd = new Date(Math.min(monthEnd.getTime(), end.getTime()))
-        const duration = Math.max(1, (clampedEnd.getTime() - clampedStart.getTime()) / (1000 * 60 * 60 * 24) + 1)
-        const widthPercent = (Math.min(daysInMonth - startOffset, duration) / daysInMonth) * 100
-
+        // If the task is entirely outside this month, skip it
+        const monthStart = new Date(year, month, 1)
+        const monthEnd = new Date(year, month + 1, 0)
         if (start > monthEnd || end < monthStart) return null
+
+        const startDay = Math.max(1, getLocalDay(start, 'start'))
+        const endDay = Math.min(daysInMonth, getLocalDay(end, 'end'))
+        const duration = Math.max(1, endDay - startDay + 1)
+
+        const startPercent = ((startDay - 1) / daysInMonth) * 100
+        const widthPercent = (duration / daysInMonth) * 100
 
         return { left: `${startPercent}%`, width: `${widthPercent}%` }
     }

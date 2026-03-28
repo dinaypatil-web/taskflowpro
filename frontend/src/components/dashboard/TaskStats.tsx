@@ -47,9 +47,14 @@ export function TaskStats({ stats, isLoading, isError, error }: TaskStatsProps) 
     )
   }
 
-  const totalTasks = Object.values(stats || {}).reduce((sum, count) => sum + count, 0)
+  const pendingTasks = stats?.PENDING || 0
+  const inProgressTasks = stats?.IN_PROGRESS || 0
   const completedTasks = stats?.COMPLETED || 0
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+  const overdueTasks = stats?.OVERDUE || 0
+  const cancelledTasks = stats?.CANCELLED || 0
+  const totalTasks = pendingTasks + inProgressTasks + completedTasks + overdueTasks + cancelledTasks
+  const actionableTasks = pendingTasks + inProgressTasks + completedTasks
+  const completionRate = actionableTasks > 0 ? Math.round((completedTasks / actionableTasks) * 100) : 0
 
   const statCards = [
     {
