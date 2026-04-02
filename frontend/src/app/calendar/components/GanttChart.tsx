@@ -35,36 +35,31 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         const endDateVal = event.endDate || event.dueDate || event.startDate
         const end = new Date(endDateVal)
 
-        // Use local date components directly to avoid UTC/timezone drift
-        const getLocalDay = (d: Date, fallback: 'start' | 'end') => {
-            const dYear = d.getFullYear()
-            const dMonth = d.getMonth()
-            
-            if (dYear === year && dMonth === month) {
-                return d.getDate()
-            }
-            
-            // If the date is in a different month, we need to know if it's before or after
-            const dateVal = d.getTime()
-            const monthStartVal = monthStart.getTime()
-            
-            if (dateVal < monthStartVal) return 1
-            return daysInMonth
-        }
-
         // If the task is entirely outside this month, skip it
         const monthStart = new Date(year, month, 1)
         const monthEnd = new Date(year, month + 1, 0)
         if (start > monthEnd || end < monthStart) return null
 
-        const startDay = Math.max(1, getLocalDay(start, 'start'))
-        const endDay = Math.min(daysInMonth, getLocalDay(end, 'end'))
-        const duration = Math.max(1, endDay - startDay + 1)
+        // Use local date components directly to avoid UTC/timezone drift
+        const getLocalDay = (d: Date) => {
+            const dYear = d.getFullYear()
+            const dMonth = d.getMonth()
+            
+            if (dYear < year || (dYear === year && dMonth < month)) return 1
+            if (dYear > year || (dYear === year && dMonth > month)) return daysInMonth
+            return d.getDate()
+        }
 
-        const startPercent = ((startDay - 1) / daysInMonth) * 100
-        const widthPercent = (duration / daysInMonth) * 100
+        const startDay = getLocalDay(start)
+        const endDay = getLocalDay(end)
+        const span = Math.max(1, endDay - startDay + 1)
 
-        return { left: `${startPercent}%`, width: `${widthPercent}%` }
+        return { gridColumn: `${startDay} / span ${span}` }
+    }
+
+    const gridStyle = {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${daysInMonth}, minmax(32px, 1fr))`
     }
 
     return (
@@ -74,14 +69,14 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                     {/* Header Row - Days */}
                     <div className="flex border-b border-gray-100 bg-gray-50/50">
                         <div className="w-48 flex-shrink-0 p-4 font-semibold text-gray-700 border-r border-gray-100">Task</div>
-                        <div className="flex-1 flex">
+                        <div className="flex-1" style={gridStyle}>
                             {days.map((day) => {
                                 const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
                                 const isToday = new Date().toDateString() === date.toDateString()
                                 return (
                                     <div
                                         key={day}
-                                        className={`flex-1 text-center py-2 border-r border-gray-100 last:border-r-0 min-w-[30px] ${isToday ? 'bg-primary-50 text-primary-600 font-bold' : 'text-gray-500'
+                                        className={`text-center py-2 border-r border-gray-100 last:border-r-0 ${isToday ? 'bg-primary-50 text-primary-600 font-bold' : 'text-gray-500'
                                             }`}
                                     >
                                         <div className="text-[10px] uppercase">{dayNames[date.getDay()]}</div>
@@ -113,27 +108,27 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                                 {event.title}
                                             </Link>
                                         </div>
-                                        <div className="flex-1 relative h-12 flex items-center">
+                                        <div className="flex-1 relative h-12" style={gridStyle}>
                                             {/* Grid Lines */}
-                                            <div className="absolute inset-0 flex">
-                                                {days.map((day) => (
-                                                    <div key={day} className="flex-1 border-r border-gray-100 last:border-r-0 min-w-[30px]" />
-                                                ))}
-                                            </div>
+                                            {days.map((day) => (
+                                                <div key={day} className="border-r border-gray-100 last:border-r-0 h-full" />
+                                            ))}
 
                                             {/* Task Bar */}
                                             {pos && (
-                                                <Link
-                                                    href={`/tasks/${id}`}
-                                                    style={{ left: pos.left, width: pos.width }}
-                                                    className={`absolute h-6 flex items-center px-2 rounded-full text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md z-10 truncate ${getPrioritySolidColor(taskPayload.priority)}`}
-                                                >
-                                                    <span className="truncate">{event.title}</span>
-                                                    {event.status === 'COMPLETED' && <span className="ml-1">✓</span>}
-                                                    {new Date(event.dueDate) < new Date() && event.status !== 'COMPLETED' && (
-                                                        <AlertCircle className="w-3 h-3 ml-1 flex-shrink-0" />
-                                                    )}
-                                                </Link>
+                                                <div className="absolute inset-0 grid items-center pointer-events-none" style={gridStyle}>
+                                                    <Link
+                                                        href={`/tasks/${id}`}
+                                                        style={{ gridColumn: pos.gridColumn }}
+                                                        className={`h-6 flex items-center px-3 rounded-full text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md pointer-events-auto z-10 truncate ${getPrioritySolidColor(taskPayload.priority)}`}
+                                                    >
+                                                        <span className="truncate">{event.title}</span>
+                                                        {event.status === 'COMPLETED' && <span className="ml-1">✓</span>}
+                                                        {new Date(event.dueDate) < new Date() && event.status !== 'COMPLETED' && (
+                                                            <AlertCircle className="w-3 h-3 ml-1 flex-shrink-0" />
+                                                        )}
+                                                    </Link>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
