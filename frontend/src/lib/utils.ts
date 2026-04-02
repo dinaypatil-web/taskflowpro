@@ -11,6 +11,21 @@ export function isValidDate(date: any): date is Date {
   return !isNaN(d.getTime());
 }
 
+export function toLocalDateString(date: string | Date | number): string {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function isValidDateString(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  return !isNaN(d.getTime());
+}
+
 export function formatDate(date: string | Date, formatStr: string = 'MMM dd, yyyy') {
   if (!date) return 'N/A'
   const dateObj = new Date(date)

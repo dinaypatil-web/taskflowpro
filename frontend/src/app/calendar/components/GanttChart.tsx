@@ -35,12 +35,21 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         const endDateVal = event.endDate || event.dueDate || event.startDate
         const end = new Date(endDateVal)
 
-        // Use local date day numbers to avoid UTC/timezone drift
+        // Use local date components directly to avoid UTC/timezone drift
         const getLocalDay = (d: Date, fallback: 'start' | 'end') => {
-            if (d.getFullYear() === year && d.getMonth() === month) {
+            const dYear = d.getFullYear()
+            const dMonth = d.getMonth()
+            
+            if (dYear === year && dMonth === month) {
                 return d.getDate()
             }
-            return fallback === 'start' ? 1 : daysInMonth
+            
+            // If the date is in a different month, we need to know if it's before or after
+            const dateVal = d.getTime()
+            const monthStartVal = monthStart.getTime()
+            
+            if (dateVal < monthStartVal) return 1
+            return daysInMonth
         }
 
         // If the task is entirely outside this month, skip it

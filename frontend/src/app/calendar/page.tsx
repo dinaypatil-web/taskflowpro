@@ -24,7 +24,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
-import { formatStatus, formatDate, getPriorityColor, getStatusColor, isValidDate } from '@/lib/utils'
+import { formatStatus, formatDate, getPriorityColor, getStatusColor, isValidDate, toLocalDateString } from '@/lib/utils'
 import { GanttChart } from './components/GanttChart'
 
 export default function CalendarPage() {
@@ -125,7 +125,7 @@ function CalendarPageContent() {
   const getEventsForDate = (date: Date) => {
     if (!monthData?.events) return []
 
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = toLocalDateString(date)
     const events: any[] = []
 
     // monthData.events is currently a Record<string, any[]> indexed by startDate.
@@ -133,16 +133,16 @@ function CalendarPageContent() {
     Object.values(monthData.events).flat().forEach((event: any) => {
       if (!isValidDate(event.startDate)) return;
 
-      const start = new Date(event.startDate).toISOString().split('T')[0]
+      const start = toLocalDateString(event.startDate)
 
       // Calculate visual end date for tracker
       const endDateVal = event.endDate || event.startDate
       if (!isValidDate(endDateVal)) return;
 
-      let end = new Date(endDateVal).toISOString().split('T')[0]
-      const today = new Date().toISOString().split('T')[0]
+      let end = toLocalDateString(endDateVal)
+      const today = toLocalDateString(new Date())
       const dueDate = event.dueDate && isValidDate(event.dueDate)
-        ? new Date(event.dueDate).toISOString().split('T')[0]
+        ? toLocalDateString(event.dueDate)
         : null
 
       if (event.status !== 'COMPLETED' && dueDate && today > dueDate) {
@@ -295,7 +295,7 @@ function CalendarPageContent() {
                         {day.getDate()}
                       </div>
                       <Link
-                        href={`/tasks/new?date=${day.toISOString().split('T')[0]}`}
+                        href={`/tasks/new?date=${toLocalDateString(day)}`}
                         className="opacity-0 group-hover:opacity-100 p-1 text-primary-500 hover:bg-primary-50 rounded transition-all"
                         title="Add task for this day"
                       >
@@ -339,19 +339,19 @@ function CalendarPageContent() {
                         const taskPayload = event.task || event
                         const id = event.taskId || event.id
 
-                        const dateStr = day.toISOString().split('T')[0]
+                        const dateStr = toLocalDateString(day)
 
                         if (!isValidDate(event.startDate)) return null;
-                        const startStr = new Date(event.startDate).toISOString().split('T')[0]
+                        const startStr = toLocalDateString(event.startDate)
 
                         const endDateVal = event.endDate || event.startDate
                         if (!isValidDate(endDateVal)) return null;
-                        const endStr = new Date(endDateVal).toISOString().split('T')[0]
+                        const endStr = toLocalDateString(endDateVal)
 
                         const dueDateStr = event.dueDate && isValidDate(event.dueDate)
-                          ? new Date(event.dueDate).toISOString().split('T')[0]
+                          ? toLocalDateString(event.dueDate)
                           : null
-                        const todayStr = new Date().toISOString().split('T')[0]
+                        const todayStr = toLocalDateString(new Date())
 
                         const isDelayed = event.status !== 'COMPLETED' && dueDateStr && dateStr > dueDateStr
                         const isStart = dateStr === startStr
