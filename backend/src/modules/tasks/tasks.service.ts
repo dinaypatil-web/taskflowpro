@@ -36,8 +36,8 @@ export class TasksService {
       isVoiceCreated: false,
       voiceMetadata: null,
       isDeleted: false,
-      startDate: taskData.startDate ? new Date(taskData.startDate) : now,
-      dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+      startDate: taskData.startDate && !isNaN(new Date(taskData.startDate).getTime()) ? new Date(taskData.startDate) : now,
+      dueDate: taskData.dueDate && !isNaN(new Date(taskData.dueDate).getTime()) ? new Date(taskData.dueDate) : null,
       attachments: taskData.attachments || [],
       createdAt: now,
       updatedAt: now,
@@ -45,14 +45,11 @@ export class TasksService {
 
     await this.firestore.setDoc('tasks', taskRef.id, task);
 
-    // Sync to calendar if it has dates
-    if (task.startDate || task.dueDate) {
-      await this.calendar.syncTaskToCalendar(userId, taskRef.id);
-    }
+    const sanitizedStakeholderIds = (stakeholderIds || []).filter(id => id && typeof id === 'string');
 
-    if (stakeholderIds?.length) {
+    if (sanitizedStakeholderIds.length) {
       const batch = this.firestore.getDb().batch();
-      for (const stakeholderId of stakeholderIds) {
+      for (const stakeholderId of sanitizedStakeholderIds) {
         const mappingRef = this.taskStakeholdersCollection.doc();
         batch.set(mappingRef, {
           taskId: taskRef.id,
@@ -62,6 +59,15 @@ export class TasksService {
         });
       }
       await batch.commit();
+    }
+
+    // Sync to calendar if it has dates (wrapped in try-catch to avoid crashing task creation)
+    if (task.startDate || task.dueDate) {
+      try {
+        await this.calendar.syncTaskToCalendar(userId, taskRef.id);
+      } catch (error) {
+        console.error(`[TasksService] Failed to sync task ${taskRef.id} to calendar:`, error);
+      }
     }
 
     return this.findOne(userId, taskRef.id);
@@ -78,21 +84,19 @@ export class TasksService {
       isVoiceCreated: true,
       voiceMetadata: voiceMetadata ? JSON.stringify(voiceMetadata) : null,
       isDeleted: false,
-      startDate: (taskData as any).startDate ? new Date((taskData as any).startDate) : now,
-      dueDate: (taskData as any).dueDate ? new Date((taskData as any).dueDate) : null,
+      startDate: (taskData as any).startDate && !isNaN(new Date((taskData as any).startDate).getTime()) ? new Date((taskData as any).startDate) : now,
+      dueDate: (taskData as any).dueDate && !isNaN(new Date((taskData as any).dueDate).getTime()) ? new Date((taskData as any).dueDate) : null,
       createdAt: now,
       updatedAt: now,
     };
 
     await this.firestore.setDoc('tasks', taskRef.id, task);
 
-    if (task.startDate || task.dueDate) {
-      await this.calendar.syncTaskToCalendar(userId, taskRef.id);
-    }
+    const sanitizedStakeholderIds = (stakeholderIds || []).filter(id => id && typeof id === 'string');
 
-    if (stakeholderIds?.length) {
+    if (sanitizedStakeholderIds.length) {
       const batch = this.firestore.getDb().batch();
-      for (const stakeholderId of stakeholderIds) {
+      for (const stakeholderId of sanitizedStakeholderIds) {
         const mappingRef = this.taskStakeholdersCollection.doc();
         batch.set(mappingRef, {
           taskId: taskRef.id,
@@ -102,6 +106,14 @@ export class TasksService {
         });
       }
       await batch.commit();
+    }
+
+    if (task.startDate || task.dueDate) {
+      try {
+        await this.calendar.syncTaskToCalendar(userId, taskRef.id);
+      } catch (error) {
+        console.error(`[TasksService] Failed to sync voice task ${taskRef.id} to calendar:`, error);
+      }
     }
 
     return this.findOne(userId, taskRef.id);
@@ -189,17 +201,26 @@ export class TasksService {
     const stakeholders = await this.getTaskStakeholders(id);
 
     // Get reminders and calendar events associated (simplified for now)
-    const [remindersSnapshot, calendarEventsSnapshot] = await Promise.all([
-      this.firestore.collection('reminders').where('taskId', '==', id).orderBy('scheduledAt', 'asc').get(),
-      this.firestore.collection('calendar_events').where('taskId', '==', id).get(),
-    ]);
+    let reminders = [];
+    let calendarEvents = [];
+    try {
+      const [remindersSnapshot, calendarEventsSnapshot] = await Promise.all([
+        this.firestore.collection('reminders').where('taskId', '==', id).orderBy('scheduledAt', 'asc').get(),
+        this.firestore.collection('calendar_events').where('taskId', '==', id).get(),
+      ]);
+      reminders = remindersSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      calendarEvents = calendarEventsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+      console.error(`[TasksService] Error fetching extra task details for ${id}:`, error);
+      // We continue since this info is non-essential for the main task view
+    }
 
     return {
       id: taskDoc.id,
       ...taskData,
       taskStakeholders: stakeholders,
-      reminders: remindersSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
-      calendarEvents: calendarEventsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
+      reminders,
+      calendarEvents,
       startDate: FirestoreService.safeToDate(taskData.startDate),
       dueDate: FirestoreService.safeToDate(taskData.dueDate),
       createdAt: FirestoreService.safeToDate(taskData.createdAt),
@@ -235,18 +256,14 @@ export class TasksService {
 
     await taskRef.update(updatePayload);
 
-    // Sync to calendar if dates or status changed
-    if (updatePayload.startDate || updatePayload.dueDate || updatePayload.status) {
-      await this.calendar.syncTaskToCalendar(userId, id);
-    }
-
     if (stakeholderIds !== undefined) {
+      const sanitizedStakeholderIds = (stakeholderIds || []).filter(id => id && typeof id === 'string');
       const existingMappings = await this.taskStakeholdersCollection.where('taskId', '==', id).get();
       const batch = this.firestore.getDb().batch();
 
       existingMappings.docs.forEach(doc => batch.delete(doc.ref));
 
-      for (const sId of stakeholderIds) {
+      for (const sId of sanitizedStakeholderIds) {
         const mappingRef = this.taskStakeholdersCollection.doc();
         batch.set(mappingRef, {
           taskId: id,
@@ -257,6 +274,15 @@ export class TasksService {
       }
 
       await batch.commit();
+    }
+
+    // Sync to calendar if dates or status changed (wrapped in try-catch)
+    if (updatePayload.startDate || updatePayload.dueDate || updatePayload.status) {
+      try {
+        await this.calendar.syncTaskToCalendar(userId, id);
+      } catch (error) {
+        console.error(`[TasksService] Failed to sync updated task ${id} to calendar:`, error);
+      }
     }
 
     return this.findOne(userId, id);
