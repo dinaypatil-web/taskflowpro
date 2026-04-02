@@ -137,7 +137,7 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                                 <div className="absolute inset-x-0 top-3 grid items-center pointer-events-none" style={gridStyle}>
                                                     <div
                                                         style={{ gridColumn: pos.planned }}
-                                                        className="h-2 bg-gray-200/80 rounded-full z-0"
+                                                        className="h-2 bg-indigo-100/50 border border-indigo-200/50 rounded-full z-0"
                                                         title="Planned Schedule"
                                                     />
                                                 </div>
@@ -149,7 +149,7 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                                     <Link
                                                         href={`/tasks/${id}`}
                                                         style={{ gridColumn: pos.actual }}
-                                                        className={`h-5 flex items-center px-3 rounded-full text-[9px] text-white font-medium shadow-sm transition-all hover:scale-[1.01] hover:shadow-md pointer-events-auto z-10 truncate ${pos.isLate && !pos.isCompleted ? 'bg-red-500' : (pos.isCompleted ? 'bg-gray-400' : getPrioritySolidColor(taskPayload.priority))}`}
+                                                        className={`h-5 flex items-center px-3 rounded-full text-[9px] text-white font-medium shadow-sm transition-all hover:scale-[1.01] hover:shadow-md pointer-events-auto z-10 truncate ${pos.isLate && !pos.isCompleted ? 'bg-rose-600' : (pos.isCompleted ? 'bg-emerald-500' : getPrioritySolidColor(taskPayload.priority))}`}
                                                     >
                                                         <span className="truncate">{event.title}</span>
                                                         {pos.isCompleted && <span className="ml-1">✓</span>}
@@ -167,10 +167,10 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
 
             {/* Legend */}
             <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex flex-wrap gap-4 text-[10px] text-gray-500">
-                <div className="flex items-center"><span className="w-4 h-2 bg-gray-200/80 mr-1 rounded-full"></span> Planned</div>
-                <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-red-500 mr-1"></span> Overdue (Actual)</div>
+                <div className="flex items-center"><span className="w-4 h-2 bg-indigo-100 border border-indigo-200 rounded-full mr-1"></span> Planned</div>
+                <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-rose-600 mr-1 animate-pulse"></span> Overdue (Actual)</div>
                 <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-primary-600 mr-1"></span> Progress (Actual)</div>
-                <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-gray-400 mr-1"></span> Completed</div>
+                <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-emerald-500 mr-1"></span> Completed</div>
             </div>
         </div>
     )
