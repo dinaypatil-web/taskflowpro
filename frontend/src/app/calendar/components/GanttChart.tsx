@@ -115,21 +115,30 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                             ))}
 
                                             {/* Task Bar */}
-                                            {pos && (
-                                                <div className="absolute inset-0 grid items-center pointer-events-none" style={gridStyle}>
-                                                    <Link
-                                                        href={`/tasks/${id}`}
-                                                        style={{ gridColumn: pos.gridColumn }}
-                                                        className={`h-6 flex items-center px-3 rounded-full text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md pointer-events-auto z-10 truncate ${getPrioritySolidColor(taskPayload.priority)}`}
-                                                    >
-                                                        <span className="truncate">{event.title}</span>
-                                                        {event.status === 'COMPLETED' && <span className="ml-1">✓</span>}
-                                                        {new Date(event.dueDate) < new Date() && event.status !== 'COMPLETED' && (
-                                                            <AlertCircle className="w-3 h-3 ml-1 flex-shrink-0" />
-                                                        )}
-                                                    </Link>
-                                                </div>
-                                            )}
+                                            {pos && (() => {
+                                                const isCompleted = event.status === 'COMPLETED'
+                                                const isOverdue = !isCompleted && event.dueDate && new Date(event.dueDate) < new Date()
+                                                
+                                                let barColor = getPrioritySolidColor(taskPayload.priority)
+                                                if (isOverdue) barColor = 'bg-red-600'
+                                                else if (isCompleted) barColor = 'bg-gray-400'
+
+                                                return (
+                                                    <div className="absolute inset-0 grid items-center pointer-events-none" style={gridStyle}>
+                                                        <Link
+                                                            href={`/tasks/${id}`}
+                                                            style={{ gridColumn: pos.gridColumn }}
+                                                            className={`h-6 flex items-center px-3 rounded-full text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md pointer-events-auto z-10 truncate ${barColor}`}
+                                                        >
+                                                            <span className="truncate">{event.title}</span>
+                                                            {isCompleted && <span className="ml-1">✓</span>}
+                                                            {isOverdue && (
+                                                                <AlertCircle className="w-3 h-3 ml-1 flex-shrink-0" />
+                                                            )}
+                                                        </Link>
+                                                    </div>
+                                                )
+                                            })()}
                                         </div>
                                     </div>
                                 )
@@ -141,6 +150,9 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
 
             {/* Legend */}
             <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex flex-wrap gap-4 text-[10px] text-gray-500">
+                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-red-600 mr-1 animate-pulse"></span> Overdue</div>
+                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-gray-400 mr-1"></span> Completed</div>
+                <div className="border-l border-gray-200 h-3 mx-1"></div>
                 <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-red-500 mr-1"></span> Urgent</div>
                 <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-orange-500 mr-1"></span> High</div>
                 <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-yellow-500 mr-1"></span> Medium</div>
