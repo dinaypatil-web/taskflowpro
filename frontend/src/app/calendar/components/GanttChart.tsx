@@ -65,11 +65,23 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
             return `${startDay} / span ${span}`
         }
 
+        // 1. On-Time actual: From start to min(actualEnd, plannedEnd)
+        const onTimeEnd = actualEnd < plannedEnd ? actualEnd : plannedEnd
+        
+        // 2. Delay actual: From plannedEnd + 1 to actualEnd
+        let delayRange = null
+        if (actualEnd > plannedEnd) {
+            const delayStart = new Date(plannedEnd)
+            delayStart.setDate(delayStart.getDate() + 1)
+            delayRange = getGridRange(delayStart, actualEnd)
+        }
+
         return {
             planned: getGridRange(start, plannedEnd),
-            actual: getGridRange(start, actualEnd),
-            isLate: actualEnd > plannedEnd,
-            isCompleted
+            actualOnTime: getGridRange(start, onTimeEnd),
+            actualDelay: delayRange,
+            isCompleted,
+            isLate: actualEnd > plannedEnd
         }
     }
 
@@ -112,7 +124,6 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                 const pos = getTaskPosition(event)
                                 if (!pos) return null
                                 
-                                const taskPayload = event.task || event
                                 const id = event.taskId || event.id
 
                                 return (
@@ -143,19 +154,43 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                                 </div>
                                             )}
 
-                                            {/* 2. Actual Bar (Thick/Bottom) */}
-                                            {pos.actual && (
-                                                <div className="absolute inset-x-0 bottom-4 grid items-center pointer-events-none" style={gridStyle}>
+                                            {/* 2. Actual Progress Bar (Thicker/Bottom) */}
+                                            <div className="absolute inset-x-0 bottom-4 grid items-center pointer-events-none" style={gridStyle}>
+                                                {pos.isCompleted ? (
+                                                    // Completed: Solid Green Bar
                                                     <Link
                                                         href={`/tasks/${id}`}
-                                                        style={{ gridColumn: pos.actual }}
-                                                        className={`h-5 flex items-center px-3 rounded-full text-[9px] text-white font-medium shadow-sm transition-all hover:scale-[1.01] hover:shadow-md pointer-events-auto z-10 truncate ${pos.isLate && !pos.isCompleted ? 'bg-rose-600' : (pos.isCompleted ? 'bg-emerald-500' : getPrioritySolidColor(taskPayload.priority))}`}
+                                                        style={{ gridColumn: (pos.actualOnTime || pos.actualDelay) ?? undefined }}
+                                                        className="h-5 flex items-center px-3 rounded-full text-[9px] text-white font-medium shadow-sm transition-all hover:scale-[1.01] hover:shadow-md pointer-events-auto z-10 truncate bg-emerald-500"
                                                     >
                                                         <span className="truncate">{event.title}</span>
-                                                        {pos.isCompleted && <span className="ml-1">✓</span>}
+                                                        <span className="ml-1">✓</span>
                                                     </Link>
-                                                </div>
-                                            )}
+                                                ) : (
+                                                    // Pending: Split Orange/Red Bar
+                                                    <>
+                                                        {pos.actualOnTime && (
+                                                            <Link
+                                                                href={`/tasks/${id}`}
+                                                                style={{ gridColumn: pos.actualOnTime }}
+                                                                className={`h-5 flex items-center px-3 ${pos.actualDelay ? 'rounded-l-full' : 'rounded-full'} text-[9px] text-white font-medium shadow-sm transition-all hover:scale-[1.01] hover:shadow-md pointer-events-auto z-10 truncate bg-orange-500`}
+                                                            >
+                                                                <span className="truncate">{event.title}</span>
+                                                            </Link>
+                                                        )}
+                                                        {pos.actualDelay && (
+                                                            <Link
+                                                                href={`/tasks/${id}`}
+                                                                style={{ gridColumn: pos.actualDelay }}
+                                                                className={`h-5 flex items-center px-3 rounded-r-full ${!pos.actualOnTime ? 'rounded-l-full' : ''} text-[9px] text-white font-medium shadow-sm transition-all hover:scale-[1.01] hover:shadow-md pointer-events-auto z-10 truncate bg-rose-600`}
+                                                            >
+                                                                {!pos.actualOnTime && <span className="truncate">{event.title}</span>}
+                                                                <AlertCircle className="w-3 h-3 ml-auto animate-pulse" />
+                                                            </Link>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )
@@ -168,8 +203,8 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
             {/* Legend */}
             <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex flex-wrap gap-4 text-[10px] text-gray-500">
                 <div className="flex items-center"><span className="w-4 h-2 bg-indigo-100 border border-indigo-200 rounded-full mr-1"></span> Planned</div>
-                <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-rose-600 mr-1 animate-pulse"></span> Overdue (Actual)</div>
-                <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-primary-600 mr-1"></span> Progress (Actual)</div>
+                <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-orange-500 mr-1"></span> On-Track Progress</div>
+                <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-rose-600 mr-1"></span> Overdue Progress</div>
                 <div className="flex items-center"><span className="w-4 h-3 rounded-full bg-emerald-500 mr-1"></span> Completed</div>
             </div>
         </div>
