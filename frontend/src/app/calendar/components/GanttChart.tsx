@@ -104,7 +104,7 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
 
                                 return (
                                     <div key={event.id} className="flex group hover:bg-gray-50/50 transition-colors">
-                                        <div className="w-48 flex-shrink-0 p-3 border-r border-gray-100 truncate flex items-center">
+                                        <div className="w-48 flex-shrink-0 p-4 border-r border-gray-100 truncate flex items-center">
                                             <Link
                                                 href={`/tasks/${id}`}
                                                 className="text-xs font-medium text-gray-700 hover:text-primary-600 truncate transition-colors"
@@ -117,7 +117,7 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                             {/* Grid Lines */}
                                             <div className="absolute inset-0 flex">
                                                 {days.map((day) => (
-                                                    <div key={day} className="flex-1 border-r border-gray-50 last:border-r-0" />
+                                                    <div key={day} className="flex-1 border-r border-gray-100 last:border-r-0 min-w-[30px]" />
                                                 ))}
                                             </div>
 
