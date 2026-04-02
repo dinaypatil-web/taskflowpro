@@ -30,31 +30,56 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
 
         const year = currentDate.getFullYear()
         const month = currentDate.getMonth()
+        const today = new Date()
 
         const start = new Date(event.startDate)
-        const endDateVal = event.endDate || event.dueDate || event.startDate
-        const end = new Date(endDateVal)
+        const plannedEndVal = event.endDate || event.dueDate || event.startDate
+        const plannedEnd = new Date(plannedEndVal)
+        
+        const isCompleted = event.status === 'COMPLETED'
+        const isOverdue = !isCompleted && today > plannedEnd
 
-        // If the task is entirely outside this month, skip it
+        // If the entire extended task (including delay) is outside this month, skip it
+        const actualEnd = isOverdue ? today : plannedEnd
         const monthStart = new Date(year, month, 1)
         const monthEnd = new Date(year, month + 1, 0)
-        if (start > monthEnd || end < monthStart) return null
+        
+        if (start > monthEnd || actualEnd < monthStart) return null
 
-        // Use local date components directly to avoid UTC/timezone drift
         const getLocalDay = (d: Date) => {
             const dYear = d.getFullYear()
             const dMonth = d.getMonth()
-            
             if (dYear < year || (dYear === year && dMonth < month)) return 1
             if (dYear > year || (dYear === year && dMonth > month)) return daysInMonth
             return d.getDate()
         }
 
-        const startDay = getLocalDay(start)
-        const endDay = getLocalDay(end)
-        const span = Math.max(1, endDay - startDay + 1)
+        // 1. Planned Segment
+        const pStartDay = getLocalDay(start)
+        const pEndDay = getLocalDay(plannedEnd)
+        const pSpan = Math.max(1, pEndDay - pStartDay + 1)
+        
+        const planned = (start <= monthEnd && plannedEnd >= monthStart) ? {
+            gridColumn: `${pStartDay} / span ${pSpan}`
+        } : null
 
-        return { gridColumn: `${startDay} / span ${span}` }
+        // 2. Extension Segment (Overdue)
+        let extension = null
+        if (isOverdue && today > plannedEnd) {
+            const extStart = new Date(plannedEnd)
+            extStart.setDate(extStart.getDate() + 1)
+            
+            if (extStart <= monthEnd && today >= monthStart) {
+                const eStartDay = getLocalDay(extStart)
+                const eEndDay = getLocalDay(today)
+                const eSpan = Math.max(1, eEndDay - eStartDay + 1)
+                extension = {
+                    gridColumn: `${eStartDay} / span ${eSpan}`
+                }
+            }
+        }
+
+        return { planned, extension, isCompleted, isOverdue }
     }
 
     const gridStyle = {
@@ -94,6 +119,8 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                         ) : (
                             taskEvents.map((event) => {
                                 const pos = getTaskPosition(event)
+                                if (!pos) return null
+                                
                                 const taskPayload = event.task || event
                                 const id = event.taskId || event.id
 
@@ -114,31 +141,32 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                                 <div key={day} className="border-r border-gray-100 last:border-r-0 h-full" />
                                             ))}
 
-                                            {/* Task Bar */}
-                                            {pos && (() => {
-                                                const isCompleted = event.status === 'COMPLETED'
-                                                const isOverdue = !isCompleted && event.dueDate && new Date(event.dueDate) < new Date()
-                                                
-                                                let barColor = getPrioritySolidColor(taskPayload.priority)
-                                                if (isOverdue) barColor = 'bg-red-600'
-                                                else if (isCompleted) barColor = 'bg-gray-400'
+                                            {/* Task Bar Container */}
+                                            <div className="absolute inset-0 grid items-center pointer-events-none" style={gridStyle}>
+                                                {/* 1. Planned Part */}
+                                                {pos.planned && (
+                                                    <Link
+                                                        href={`/tasks/${id}`}
+                                                        style={{ gridColumn: pos.planned.gridColumn }}
+                                                        className={`h-6 flex items-center px-3 ${pos.extension ? 'rounded-l-full border-r border-white/20' : 'rounded-full'} text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md pointer-events-auto z-10 truncate ${pos.isCompleted ? 'bg-gray-400' : getPrioritySolidColor(taskPayload.priority)}`}
+                                                    >
+                                                        <span className="truncate">{event.title}</span>
+                                                        {pos.isCompleted && !pos.extension && <span className="ml-1">✓</span>}
+                                                    </Link>
+                                                )}
 
-                                                return (
-                                                    <div className="absolute inset-0 grid items-center pointer-events-none" style={gridStyle}>
-                                                        <Link
-                                                            href={`/tasks/${id}`}
-                                                            style={{ gridColumn: pos.gridColumn }}
-                                                            className={`h-6 flex items-center px-3 rounded-full text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md pointer-events-auto z-10 truncate ${barColor}`}
-                                                        >
-                                                            <span className="truncate">{event.title}</span>
-                                                            {isCompleted && <span className="ml-1">✓</span>}
-                                                            {isOverdue && (
-                                                                <AlertCircle className="w-3 h-3 ml-1 flex-shrink-0" />
-                                                            )}
-                                                        </Link>
-                                                    </div>
-                                                )
-                                            })()}
+                                                {/* 2. Extension / Delay Part */}
+                                                {pos.extension && (
+                                                    <Link
+                                                        href={`/tasks/${id}`}
+                                                        style={{ gridColumn: pos.extension.gridColumn }}
+                                                        className={`h-6 flex items-center px-3 rounded-r-full text-[10px] text-white font-medium shadow-sm transition-all hover:scale-[1.02] hover:shadow-md pointer-events-auto z-10 truncate bg-red-600`}
+                                                    >
+                                                        {!pos.planned && <span className="truncate">{event.title} (Delay)</span>}
+                                                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                                    </Link>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )
