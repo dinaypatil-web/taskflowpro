@@ -67,12 +67,17 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         } : null
 
         // 2. Actual Progress Range
-        const aStartDay = getLocalDay(start)
-        const aEndDay = getLocalDay(isLate ? plannedEnd : actualEnd)
-        const aSpan = Math.max(1, aEndDay - aStartDay + 1)
-        const actual = (start <= monthEnd && actualEnd >= monthStart) ? {
-            gridColumn: `${aStartDay} / span ${aSpan}`
-        } : null
+        let actual = null
+        if (plannedEnd >= monthStart) {
+            const aStartDay = getLocalDay(start)
+            const aEndDay = getLocalDay(isLate ? plannedEnd : actualEnd)
+            const aSpan = Math.max(1, aEndDay - aStartDay + 1)
+            if (start <= monthEnd && (isLate ? plannedEnd : actualEnd) >= monthStart) {
+                actual = {
+                    gridColumn: `${aStartDay} / span ${aSpan}`
+                }
+            }
+        }
 
         // 3. Delay Range (Extension)
         let delay = null
@@ -80,8 +85,9 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
             const delayStart = new Date(plannedEnd)
             delayStart.setDate(delayStart.getDate() + 1)
             
-            if (delayStart <= monthEnd && actualEnd >= monthStart) {
-                const dStartDay = getLocalDay(delayStart)
+            if (actualEnd >= monthStart && delayStart <= monthEnd) {
+                // If plannedEnd was before this month, delay starts at Day 1
+                const dStartDay = (plannedEnd < monthStart) ? 1 : getLocalDay(delayStart)
                 const dEndDay = getLocalDay(actualEnd)
                 const dSpan = Math.max(1, dEndDay - dStartDay + 1)
                 delay = {
