@@ -46,9 +46,9 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         const completedAt = taskCompletedAt ? new Date(taskCompletedAt) : null
         
         // Actual end is when it was finished, or "today" if still pending
-        // Use plannedEnd as fallback if completedAt is missing for finished tasks
+        // For completed tasks, prioritizes: 1. completedAt, 2. event.endDate, 3. plannedEnd
         const actualEnd = isCompleted 
-            ? (isValidDate(completedAt) ? completedAt : plannedEnd) 
+            ? (isValidDate(completedAt) ? completedAt : (isValidDate(event.endDate) ? new Date(event.endDate) : plannedEnd)) 
             : today
 
         // If the entire task is outside this month, skip it
