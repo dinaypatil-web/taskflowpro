@@ -359,13 +359,17 @@ function CalendarPageContent() {
                           : null
                         const todayStr = toLocalDateString(new Date())
 
-                        const isDelayed = event.status !== 'COMPLETED' && dueDateStr && dateStr > dueDateStr
+                        const isCompleted = event.status === 'COMPLETED'
+                        const isDelayed = !isCompleted && dueDateStr && dateStr > dueDateStr
                         const isStart = dateStr === startStr
-                        const isEnd = dateStr === endStr || (event.status !== 'COMPLETED' && dateStr === todayStr && dateStr > endStr)
+                        const isEnd = dateStr === endStr || (!isCompleted && dateStr === todayStr && dateStr > endStr)
 
-                        const baseStyle = isDelayed
-                          ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'
-                          : `${getPriorityColor(taskPayload.priority)} border-transparent hover:opacity-80`
+                        // Sync with Gantt chart colors: Completed (Green), Overdue (Red), On-Track (Orange)
+                        const baseStyle = isCompleted
+                          ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-sm'
+                          : (isDelayed
+                              ? 'bg-rose-600 text-white border-rose-700 hover:bg-rose-700 shadow-sm'
+                              : 'bg-orange-500 text-white border-orange-600 hover:bg-orange-600 shadow-sm')
 
                         return (
                           <Link
@@ -376,8 +380,9 @@ function CalendarPageContent() {
                               }`}
                           >
                             <div className="flex items-center">
-                              {isDelayed && dateStr === todayStr && <AlertCircle className="h-2 w-2 mr-1 flex-shrink-0" />}
+                              {isDelayed && dateStr === todayStr && <AlertCircle className="h-2 w-2 mr-1 flex-shrink-0 animate-pulse" />}
                               <span className="truncate">{isStart ? event.title : '\u00A0'}</span>
+                              {isCompleted && isEnd && <span className="ml-auto text-[8px]">✓</span>}
                             </div>
                           </Link>
                         )
