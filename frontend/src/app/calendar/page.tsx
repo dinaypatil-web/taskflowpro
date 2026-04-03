@@ -128,26 +128,31 @@ function CalendarPageContent() {
     const dateStr = toLocalDateString(date)
     const events: any[] = []
 
-    // monthData.events is currently a Record<string, any[]> indexed by startDate.
-    // We need to iterate all events and check if the date falls in range.
+    // monthData.events is currently a Record<string, any[]> indexed by first-match startDate.
+    // We iterate all events to see if the current day falls within the task's active range.
     Object.values(monthData.events).flat().forEach((event: any) => {
-      if (!isValidDate(event.startDate)) return;
+      const task = event.task || {}
+      const taskStatus = task.status || event.status
+      const taskStartDate = task.startDate || event.startDate
+      const taskDueDate = task.dueDate || event.dueDate
+      const taskCompletedAt = task.completedAt || event.completedAt
 
-      const start = toLocalDateString(event.startDate)
+      if (!isValidDate(taskStartDate)) return;
 
-      // Calculate visual end date for tracker
-      const endDateVal = event.endDate || event.startDate
-      if (!isValidDate(endDateVal)) return;
-
-      let end = toLocalDateString(endDateVal)
+      const isCompleted = taskStatus === 'COMPLETED'
+      const start = toLocalDateString(taskStartDate)
       const today = toLocalDateString(new Date())
-      const dueDate = event.dueDate && isValidDate(event.dueDate)
-        ? toLocalDateString(event.dueDate)
-        : null
-
-      if (event.status !== 'COMPLETED' && dueDate && today > dueDate) {
-        // Extend to today if overdue and not completed
-        end = today > end ? today : end
+      
+      // Derive effective visual end date for the grid
+      let end: string
+      if (isCompleted) {
+          // Finished: end at completion or the synced endDate
+          const compDate = taskCompletedAt || event.endDate || taskDueDate || taskStartDate
+          end = toLocalDateString(compDate)
+      } else {
+          // Pending: end at max(today, dueDate) to ensure it stays visible until finished
+          const dueDateStr = taskDueDate ? toLocalDateString(taskDueDate) : null
+          end = (dueDateStr && dueDateStr > today) ? dueDateStr : today
       }
 
       if (dateStr >= start && dateStr <= end) {
@@ -155,8 +160,9 @@ function CalendarPageContent() {
       }
     })
 
-    // De-duplicate in case of multiple events for same task (unlikely with taskId sync)
-    return events.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+    // De-duplicate in case of multiple event fragments for same task
+    const taskId = (t: any) => t.taskId || t.id
+    return events.filter((v, i, a) => a.findIndex(t => taskId(t) === taskId(v)) === i)
   }
 
   const isTaskDelayed = (task: any) => {
