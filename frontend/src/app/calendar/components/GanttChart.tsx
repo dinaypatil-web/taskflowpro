@@ -53,8 +53,8 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
 
         // If the entire task is outside this month, skip it
         const maxEnd = (isValidDate(actualEnd) && actualEnd > plannedEnd) ? actualEnd : plannedEnd
-        const monthStart = new Date(year, month, 1)
-        const monthEnd = new Date(year, month + 1, 0)
+        const monthStart = new Date(year, month, 1, 0, 0, 0, 0)
+        const monthEnd = new Date(year, month, daysInMonth, 23, 59, 59, 999)
         
         if (start > monthEnd || (isValidDate(maxEnd) && maxEnd < monthStart)) return null
 
@@ -194,9 +194,10 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                                                 href={`/tasks/${id}`}
                                                                 style={{ gridColumn: pos.actualDelay }}
                                                                 className={`h-5 flex items-center px-3 rounded-r-full ${!pos.actualOnTime ? 'rounded-l-full' : ''} text-[9px] text-white font-medium shadow-sm transition-all hover:scale-[1.01] hover:shadow-md pointer-events-auto z-10 truncate bg-rose-600`}
+                                                                title="Overdue Progress"
                                                             >
                                                                 {!pos.actualOnTime && <span className="truncate">{event.title}</span>}
-                                                                <AlertCircle className="w-3 h-3 ml-auto animate-pulse" />
+                                                                <AlertCircle className="w-3 h-3 ml-auto animate-pulse shrink-0" />
                                                             </Link>
                                                         )}
                                                     </>

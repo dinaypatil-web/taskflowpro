@@ -49,10 +49,13 @@ export class CalendarService {
     return Promise.all(snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .filter(data => {
-        // In-memory filter for the second half of the overlap: endDate >= queryStartDate
-        if (!startDate) return true;
+        const queryStart = new Date(startDate);
         const eventEndDate = FirestoreService.safeToDate(data.endDate) || FirestoreService.safeToDate(data.startDate);
-        return eventEndDate && eventEndDate >= new Date(startDate);
+        const isNotCompleted = data.status !== 'COMPLETED';
+        
+        // Include if the event actually overlaps with the query range
+        // OR if it's not completed (meaning it's ongoing and should be carried forward)
+        return (eventEndDate && eventEndDate >= queryStart) || isNotCompleted;
       })
       .map(async (data) => {
         const taskDoc = data.taskId ? await this.firestore.collection('tasks').doc(data.taskId).get() : null;
