@@ -246,6 +246,7 @@ export class CalendarService {
       endDate: taskEndDate,
       status: task.status,
       dueDate: task.dueDate,
+      completedAt: task.completedAt,
       isAllDay: true,
       updatedAt: new Date(),
     };

@@ -26,30 +26,40 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
     const taskEvents = events.filter((v, i, a) => a.findIndex(t => (t.taskId || t.id) === (v.taskId || v.id)) === i)
 
     const getTaskPosition = (event: any) => {
-        if (!isValidDate(event.startDate)) return null
+        const task = event.task || {}
+        const taskStatus = task.status || event.status
+        const taskStartDate = task.startDate || event.startDate
+        const taskDueDate = task.dueDate || event.dueDate
+        const taskCompletedAt = task.completedAt || event.completedAt
+
+        if (!isValidDate(taskStartDate)) return null
 
         const year = currentDate.getFullYear()
         const month = currentDate.getMonth()
         const today = new Date()
 
-        const start = new Date(event.startDate)
-        const plannedEnd = new Date(event.dueDate || event.startDate)
+        const start = new Date(taskStartDate)
+        const plannedEndStr = taskDueDate || task.startDate || event.startDate
+        const plannedEnd = isValidDate(plannedEndStr) ? new Date(plannedEndStr) : start
         
-        const isCompleted = event.status === 'COMPLETED'
-        const completedAt = event.completedAt ? new Date(event.completedAt) : null
+        const isCompleted = taskStatus === 'COMPLETED'
+        const completedAt = taskCompletedAt ? new Date(taskCompletedAt) : null
         
         // Actual end is when it was finished, or "today" if still pending
-        // But for completed tasks, it MUST end at completedAt
-        const actualEnd = isCompleted ? (completedAt || plannedEnd) : today
+        // Use plannedEnd as fallback if completedAt is missing for finished tasks
+        const actualEnd = isCompleted 
+            ? (isValidDate(completedAt) ? completedAt : plannedEnd) 
+            : today
 
         // If the entire task is outside this month, skip it
-        const maxEnd = actualEnd > plannedEnd ? actualEnd : plannedEnd
+        const maxEnd = (isValidDate(actualEnd) && actualEnd > plannedEnd) ? actualEnd : plannedEnd
         const monthStart = new Date(year, month, 1)
         const monthEnd = new Date(year, month + 1, 0)
         
-        if (start > monthEnd || maxEnd < monthStart) return null
+        if (start > monthEnd || (isValidDate(maxEnd) && maxEnd < monthStart)) return null
 
         const getGridRange = (s: Date, e: Date) => {
+            if (!isValidDate(s) || !isValidDate(e)) return null
             if (s > monthEnd || e < monthStart) return null
             
             // Limit the start and end to the current month's boundaries
@@ -59,16 +69,18 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
             const startDay = effectiveStart.getDate()
             const endDay = effectiveEnd.getDate()
             
+            if (isNaN(startDay) || isNaN(endDay)) return null
+
             const span = Math.max(1, endDay - startDay + 1)
             return `${startDay} / span ${span}`
         }
 
         // 1. On-Time actual: From start to min(actualEnd, plannedEnd)
-        const onTimeEnd = actualEnd < plannedEnd ? actualEnd : plannedEnd
+        const onTimeEnd = (isValidDate(actualEnd) && actualEnd < plannedEnd) ? actualEnd : plannedEnd
         
         // 2. Delay actual: From plannedEnd + 1 to actualEnd
         let delayRange = null
-        if (actualEnd > plannedEnd) {
+        if (isValidDate(actualEnd) && actualEnd > plannedEnd) {
             const delayStart = new Date(plannedEnd)
             delayStart.setDate(delayStart.getDate() + 1)
             delayRange = getGridRange(delayStart, actualEnd)
@@ -80,7 +92,7 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
             actualFull: getGridRange(start, actualEnd),
             actualDelay: delayRange,
             isCompleted,
-            isLate: actualEnd > plannedEnd
+            isLate: isValidDate(actualEnd) && actualEnd > plannedEnd
         }
     }
 
