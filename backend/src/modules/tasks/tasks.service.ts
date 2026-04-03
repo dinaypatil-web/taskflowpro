@@ -168,15 +168,7 @@ export class TasksService {
     const tasks = await Promise.all(snapshot.docs.map(async (doc) => {
       const taskData = doc.data();
       const stakeholders = await this.getTaskStakeholders(doc.id);
-      return {
-        id: doc.id,
-        ...taskData,
-        taskStakeholders: stakeholders,
-        startDate: FirestoreService.safeToDate(taskData.startDate),
-        dueDate: FirestoreService.safeToDate(taskData.dueDate),
-        createdAt: FirestoreService.safeToDate(taskData.createdAt),
-        updatedAt: FirestoreService.safeToDate(taskData.updatedAt),
-      };
+      return this.sanitizeTask(doc.id, taskData, stakeholders);
     }));
 
     return {
@@ -216,15 +208,9 @@ export class TasksService {
     }
 
     return {
-      id: taskDoc.id,
-      ...taskData,
-      taskStakeholders: stakeholders,
+      ...this.sanitizeTask(taskDoc.id, taskData, stakeholders),
       reminders,
       calendarEvents,
-      startDate: FirestoreService.safeToDate(taskData.startDate),
-      dueDate: FirestoreService.safeToDate(taskData.dueDate),
-      createdAt: FirestoreService.safeToDate(taskData.createdAt),
-      updatedAt: FirestoreService.safeToDate(taskData.updatedAt),
     };
   }
 
@@ -345,7 +331,7 @@ export class TasksService {
         await doc.ref.update({ status: 'OVERDUE', updatedAt: new Date() });
       }
 
-      return { id: doc.id, ...data, status: 'OVERDUE', taskStakeholders: stakeholders };
+      return this.sanitizeTask(doc.id, { ...data, status: 'OVERDUE' }, stakeholders);
     }));
 
     return overdueTasks;
@@ -368,7 +354,7 @@ export class TasksService {
       .map(async (doc) => {
         const data = doc.data();
         const stakeholders = await this.getTaskStakeholders(doc.id);
-        return { id: doc.id, ...data, taskStakeholders: stakeholders };
+        return this.sanitizeTask(doc.id, data, stakeholders);
       }));
   }
 
@@ -394,5 +380,19 @@ export class TasksService {
       console.error(`Error fetching stakeholders for task ${taskId}:`, error);
       return [];
     }
+  }
+
+  private sanitizeTask(docId: string, taskData: any, stakeholders: any[] = []) {
+    return {
+      ...taskData,
+      id: docId,
+      taskStakeholders: stakeholders,
+      startDate: FirestoreService.safeToDate(taskData.startDate),
+      dueDate: FirestoreService.safeToDate(taskData.dueDate),
+      completedAt: FirestoreService.safeToDate(taskData.completedAt),
+      createdAt: FirestoreService.safeToDate(taskData.createdAt),
+      updatedAt: FirestoreService.safeToDate(taskData.updatedAt),
+      deletedAt: FirestoreService.safeToDate(taskData.deletedAt),
+    };
   }
 }

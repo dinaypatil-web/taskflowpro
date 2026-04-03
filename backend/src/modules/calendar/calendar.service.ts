@@ -206,8 +206,8 @@ export class CalendarService {
       return null;
     }
 
-    const taskStartDate = task.startDate || task.createdAt;
-    const taskEndDate = task.completedAt || task.dueDate || taskStartDate;
+    const taskStartDate = FirestoreService.safeToDate(task.startDate) || FirestoreService.safeToDate(task.createdAt);
+    const taskEndDate = FirestoreService.safeToDate(task.completedAt) || FirestoreService.safeToDate(task.dueDate) || taskStartDate;
 
     const existingEvents = await this.eventsCollection.where('taskId', '==', taskId).where('userId', '==', userId).limit(1).get();
 
