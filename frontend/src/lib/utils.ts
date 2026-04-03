@@ -6,14 +6,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function safeParseDate(date: any): Date | null {
+  if (!date) return null;
+  if (date instanceof Date) return date;
+  
+  // If we already have an ISO date string, extract YYYY-MM-DD to avoid TZ shifting
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+    const [year, month, day] = date.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return null;
+  
+  return d;
+}
+
 export function isValidDate(date: any): date is Date {
-  const d = date instanceof Date ? date : new Date(date);
-  return !isNaN(d.getTime());
+  const d = safeParseDate(date);
+  return d !== null && !isNaN(d.getTime());
 }
 
 export function toLocalDateString(date: string | Date | number): string {
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
+  const d = safeParseDate(date);
+  if (!d) return '';
+
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');

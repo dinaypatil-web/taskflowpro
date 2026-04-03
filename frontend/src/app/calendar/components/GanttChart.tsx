@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { getPriorityColor, getPrioritySolidColor, isValidDate } from '@/lib/utils'
+import { getPriorityColor, getPrioritySolidColor, isValidDate, safeParseDate } from '@/lib/utils'
 import { AlertCircle } from 'lucide-react'
 
 interface GanttChartProps {
@@ -32,8 +32,8 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         const taskDueDate = task.dueDate || event.dueDate
         const taskCompletedAt = task.completedAt || event.completedAt
 
-        const start = new Date(taskStartDate)
-        if (!isValidDate(start)) return null
+        const start = safeParseDate(taskStartDate)
+        if (!start || !isValidDate(start)) return null
 
         const year = currentDate.getFullYear()
         const month = currentDate.getMonth()
@@ -44,15 +44,15 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         const monthEnd = new Date(year, month, daysInMonth, 23, 59, 59, 999)
 
         const plannedEndStr = taskDueDate || task.startDate || event.startDate
-        const plannedEnd = isValidDate(plannedEndStr) ? new Date(plannedEndStr) : start
+        const plannedEnd = safeParseDate(plannedEndStr) || start
         
         const isCompleted = taskStatus === 'COMPLETED'
-        const completedAt = taskCompletedAt ? new Date(taskCompletedAt) : null
+        const completedAt = safeParseDate(taskCompletedAt)
         
         // For visibility calculation, we want to know if the task is "active" during this month.
         // Pending tasks are always active until 'today'.
         const actualEnd = isCompleted 
-            ? (isValidDate(completedAt) ? completedAt : (isValidDate(event.endDate) ? new Date(event.endDate) : plannedEnd)) 
+            ? (completedAt || safeParseDate(event.endDate) || plannedEnd) 
             : today
 
         // If the task is pending, it should be visible in future months until 'today' or its plannedEnd.
