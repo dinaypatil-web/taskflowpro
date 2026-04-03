@@ -140,18 +140,17 @@ export function getStatusColor(status: string) {
   const s = status.toLowerCase();
   switch (s) {
     case 'pending':
-      return 'text-gray-600 bg-gray-100'
     case 'in_progress':
     case 'in-progress':
-      return 'text-blue-600 bg-blue-100'
+      return 'text-orange-700 bg-orange-100 border-orange-100'
     case 'completed':
-      return 'text-green-600 bg-green-100'
+      return 'text-emerald-700 bg-emerald-100 border-emerald-100'
     case 'cancelled':
-      return 'text-gray-500 bg-gray-100'
+      return 'text-gray-500 bg-gray-100 border-gray-100'
     case 'overdue':
-      return 'text-red-600 bg-red-100'
+      return 'text-rose-700 bg-rose-100 border-rose-100'
     default:
-      return 'text-gray-600 bg-gray-100'
+      return 'text-gray-600 bg-gray-100 border-transparent'
   }
 }
 
