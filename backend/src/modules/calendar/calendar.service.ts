@@ -56,11 +56,27 @@ export class CalendarService {
       })
       .map(async (data) => {
         const taskDoc = data.taskId ? await this.firestore.collection('tasks').doc(data.taskId).get() : null;
+        let task = null;
+        if (taskDoc?.exists) {
+          const taskData = taskDoc.data();
+          task = {
+            id: taskDoc.id,
+            ...taskData,
+            startDate: FirestoreService.safeToDate(taskData.startDate),
+            dueDate: FirestoreService.safeToDate(taskData.dueDate),
+            completedAt: FirestoreService.safeToDate(taskData.completedAt),
+            createdAt: FirestoreService.safeToDate(taskData.createdAt),
+            updatedAt: FirestoreService.safeToDate(taskData.updatedAt),
+          };
+        }
+
         return {
           ...data,
-          task: taskDoc?.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
+          task,
           startDate: FirestoreService.safeToDate(data.startDate),
           endDate: FirestoreService.safeToDate(data.endDate),
+          dueDate: FirestoreService.safeToDate(data.dueDate),
+          completedAt: FirestoreService.safeToDate(data.completedAt),
           createdAt: FirestoreService.safeToDate(data.createdAt),
           updatedAt: FirestoreService.safeToDate(data.updatedAt),
         };
@@ -80,9 +96,19 @@ export class CalendarService {
     return {
       id: eventDoc.id,
       ...data,
-      task: taskDoc?.exists ? { id: taskDoc.id, ...taskDoc.data() } : null,
+      task: taskDoc?.exists ? {
+        id: taskDoc.id,
+        ...taskDoc.data(),
+        startDate: FirestoreService.safeToDate(taskDoc.data().startDate),
+        dueDate: FirestoreService.safeToDate(taskDoc.data().dueDate),
+        completedAt: FirestoreService.safeToDate(taskDoc.data().completedAt),
+        createdAt: FirestoreService.safeToDate(taskDoc.data().createdAt),
+        updatedAt: FirestoreService.safeToDate(taskDoc.data().updatedAt),
+      } : null,
       startDate: FirestoreService.safeToDate(data.startDate),
       endDate: FirestoreService.safeToDate(data.endDate),
+      dueDate: FirestoreService.safeToDate(data.dueDate),
+      completedAt: FirestoreService.safeToDate(data.completedAt),
       createdAt: FirestoreService.safeToDate(data.createdAt),
       updatedAt: FirestoreService.safeToDate(data.updatedAt),
     };

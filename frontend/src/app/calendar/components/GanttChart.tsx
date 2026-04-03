@@ -33,12 +33,13 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         const today = new Date()
 
         const start = new Date(event.startDate)
-        const plannedEnd = new Date(event.dueDate || event.endDate || event.startDate)
+        const plannedEnd = new Date(event.dueDate || event.startDate)
         
         const isCompleted = event.status === 'COMPLETED'
         const completedAt = event.completedAt ? new Date(event.completedAt) : null
         
         // Actual end is when it was finished, or "today" if still pending
+        // But for completed tasks, it MUST end at completedAt
         const actualEnd = isCompleted ? (completedAt || plannedEnd) : today
 
         // If the entire task is outside this month, skip it
@@ -48,19 +49,16 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         
         if (start > monthEnd || maxEnd < monthStart) return null
 
-        const getLocalDay = (d: Date) => {
-            const dYear = d.getFullYear()
-            const dMonth = d.getMonth()
-            if (dYear < year || (dYear === year && dMonth < month)) return 1
-            if (dYear > year || (dYear === year && dMonth > month)) return daysInMonth
-            return d.getDate()
-        }
-
-        // Helper to calculate grid column based on date range
         const getGridRange = (s: Date, e: Date) => {
             if (s > monthEnd || e < monthStart) return null
-            const startDay = getLocalDay(s)
-            const endDay = getLocalDay(e)
+            
+            // Limit the start and end to the current month's boundaries
+            const effectiveStart = s < monthStart ? monthStart : s
+            const effectiveEnd = e > monthEnd ? monthEnd : e
+            
+            const startDay = effectiveStart.getDate()
+            const endDay = effectiveEnd.getDate()
+            
             const span = Math.max(1, endDay - startDay + 1)
             return `${startDay} / span ${span}`
         }
@@ -79,6 +77,7 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         return {
             planned: getGridRange(start, plannedEnd),
             actualOnTime: getGridRange(start, onTimeEnd),
+            actualFull: getGridRange(start, actualEnd),
             actualDelay: delayRange,
             isCompleted,
             isLate: actualEnd > plannedEnd
@@ -157,14 +156,14 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
                                             {/* 2. Actual Progress Bar (Thicker/Bottom) */}
                                             <div className="absolute inset-x-0 bottom-4 grid items-center pointer-events-none" style={gridStyle}>
                                                 {pos.isCompleted ? (
-                                                    // Completed: Solid Green Bar
+                                                    // Completed: Solid Green Bar (from start to actualEnd)
                                                     <Link
                                                         href={`/tasks/${id}`}
-                                                        style={{ gridColumn: (pos.actualOnTime || pos.actualDelay) ?? undefined }}
+                                                        style={{ gridColumn: pos.actualFull ?? undefined }}
                                                         className="h-5 flex items-center px-3 rounded-full text-[9px] text-white font-medium shadow-sm transition-all hover:scale-[1.01] hover:shadow-md pointer-events-auto z-10 truncate bg-emerald-500"
                                                     >
                                                         <span className="truncate">{event.title}</span>
-                                                        <span className="ml-1">✓</span>
+                                                        <span className="ml-1 shrink-0">✓</span>
                                                     </Link>
                                                 ) : (
                                                     // Pending: Split Orange/Red Bar
