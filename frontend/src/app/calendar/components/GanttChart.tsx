@@ -32,31 +32,35 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
         const taskDueDate = task.dueDate || event.dueDate
         const taskCompletedAt = task.completedAt || event.completedAt
 
-        if (!isValidDate(taskStartDate)) return null
+        const start = new Date(taskStartDate)
+        if (!isValidDate(start)) return null
 
         const year = currentDate.getFullYear()
         const month = currentDate.getMonth()
         const today = new Date()
+        
+        // Canonical month boundaries
+        const monthStart = new Date(year, month, 1, 0, 0, 0, 0)
+        const monthEnd = new Date(year, month, daysInMonth, 23, 59, 59, 999)
 
-        const start = new Date(taskStartDate)
         const plannedEndStr = taskDueDate || task.startDate || event.startDate
         const plannedEnd = isValidDate(plannedEndStr) ? new Date(plannedEndStr) : start
         
         const isCompleted = taskStatus === 'COMPLETED'
         const completedAt = taskCompletedAt ? new Date(taskCompletedAt) : null
         
-        // Actual end is when it was finished, or "today" if still pending
-        // For completed tasks, prioritizes: 1. completedAt, 2. event.endDate, 3. plannedEnd
+        // For visibility calculation, we want to know if the task is "active" during this month.
+        // Pending tasks are always active until 'today'.
         const actualEnd = isCompleted 
             ? (isValidDate(completedAt) ? completedAt : (isValidDate(event.endDate) ? new Date(event.endDate) : plannedEnd)) 
             : today
 
-        // If the entire task is outside this month, skip it
-        const maxEnd = (isValidDate(actualEnd) && actualEnd > plannedEnd) ? actualEnd : plannedEnd
-        const monthStart = new Date(year, month, 1, 0, 0, 0, 0)
-        const monthEnd = new Date(year, month, daysInMonth, 23, 59, 59, 999)
+        // If the task is pending, it should be visible in future months until 'today' or its plannedEnd.
+        // For carry-forward, if it's not completed and its startDate is in the past, it should show.
+        const visibilityEnd = isCompleted ? actualEnd : (today > plannedEnd ? today : plannedEnd);
         
-        if (start > monthEnd || (isValidDate(maxEnd) && maxEnd < monthStart)) return null
+        // Filter: Task must start before the end of the month AND its activity must end after the start of the month
+        if (start > monthEnd || (isValidDate(visibilityEnd) && visibilityEnd < monthStart)) return null
 
         const getGridRange = (s: Date, e: Date) => {
             if (!isValidDate(s) || !isValidDate(e)) return null
@@ -69,8 +73,8 @@ export function GanttChart({ currentDate, events }: GanttChartProps) {
             const startDay = effectiveStart.getDate()
             const endDay = effectiveEnd.getDate()
             
-            if (isNaN(startDay) || isNaN(endDay)) return null
-
+            // Critical: If the year or month changed due to boundary clipping, 
+            // ensure we use the correct relative day-in-month index.
             const span = Math.max(1, endDay - startDay + 1)
             return `${startDay} / span ${span}`
         }
