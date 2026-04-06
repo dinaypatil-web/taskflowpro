@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,8 +32,10 @@ interface EditStakeholderPageProps {
   }
 }
 
-export default function EditStakeholderPage({ params }: EditStakeholderPageProps) {
+export default function EditStakeholderPage() {
   const router = useRouter()
+  const params = useParams()
+  const id = params.id as string
   const queryClient = useQueryClient()
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -65,8 +67,8 @@ export default function EditStakeholderPage({ params }: EditStakeholderPageProps
 
   // Fetch stakeholder data
   const { data: stakeholder, isLoading } = useQuery(
-    ['stakeholder', params.id],
-    () => stakeholdersApi.getStakeholder(params.id),
+    ['stakeholder', id],
+    () => stakeholdersApi.getStakeholder(id),
     {
       onError: () => {
         toast.error('Failed to load stakeholder data')
@@ -89,11 +91,11 @@ export default function EditStakeholderPage({ params }: EditStakeholderPageProps
   }, [stakeholder, reset])
 
   const updateMutation = useMutation(
-    (data: UpdateStakeholderRequest) => stakeholdersApi.updateStakeholder(params.id, data),
+    (data: UpdateStakeholderRequest) => stakeholdersApi.updateStakeholder(id, data),
     {
       onSuccess: () => {
         queryClient.invalidateQueries('stakeholders')
-        queryClient.invalidateQueries(['stakeholder', params.id])
+        queryClient.invalidateQueries(['stakeholder', id])
         toast.success('Stakeholder updated successfully!')
         router.push('/stakeholders')
       },
@@ -105,7 +107,7 @@ export default function EditStakeholderPage({ params }: EditStakeholderPageProps
   )
 
   const deleteMutation = useMutation(
-    () => stakeholdersApi.deleteStakeholder(params.id),
+    () => stakeholdersApi.deleteStakeholder(id),
     {
       onSuccess: () => {
         queryClient.invalidateQueries('stakeholders')
@@ -208,9 +210,9 @@ export default function EditStakeholderPage({ params }: EditStakeholderPageProps
               <SaveToContacts
                 stakeholder={{
                   firstName: stakeholder.firstName,
-                  lastName: stakeholder.lastName,
-                  email: stakeholder.email,
-                  phone: stakeholder.phone,
+                  lastName: stakeholder.lastName || '',
+                  email: stakeholder.emails?.[0] || stakeholder.email,
+                  phone: stakeholder.phones?.[0] || stakeholder.phone,
                   organization: stakeholder.organization,
                 }}
               />

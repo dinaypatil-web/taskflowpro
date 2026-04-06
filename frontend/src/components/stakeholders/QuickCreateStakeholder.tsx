@@ -13,7 +13,7 @@ import { Stakeholder } from '@/types/task'
 
 const stakeholderSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
-    lastName: z.string().min(1, 'Last name is required'),
+    lastName: z.string().optional(),
     emails: z.array(z.object({ value: z.string().email('Invalid email').or(z.literal('')) })),
     phones: z.array(z.object({ value: z.string() })),
     organization: z.string().optional(),
@@ -107,7 +107,7 @@ export function QuickCreateStakeholder({ onSuccess, onClose }: QuickCreateStakeh
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Last Name *
+                            Last Name
                         </label>
                         <input
                             type="text"

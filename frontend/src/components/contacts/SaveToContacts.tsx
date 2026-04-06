@@ -14,7 +14,7 @@ import {
 interface SaveToContactsProps {
   stakeholder: {
     firstName: string
-    lastName: string
+    lastName?: string
     phone?: string
     email?: string
     organization?: string

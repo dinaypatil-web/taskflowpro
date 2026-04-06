@@ -104,9 +104,11 @@ export const useContacts = () => {
   // Save stakeholder to device contacts
   const saveToContacts = useCallback(async (stakeholder: {
     firstName: string
-    lastName: string
+    lastName?: string
     emails?: string[]
     phones?: string[]
+    email?: string
+    phone?: string
     organization?: string
   }): Promise<boolean> => {
     if (!isSupported) {
@@ -120,15 +122,19 @@ export const useContacts = () => {
 
       // Create contact object
       const contactData: any = {
-        name: [`${stakeholder.firstName} ${stakeholder.lastName}`.trim()],
-      }
-
-      if (stakeholder.phones && stakeholder.phones.length > 0) {
-        contactData.tel = stakeholder.phones
+        name: [`${stakeholder.firstName} ${stakeholder.lastName || ''}`.trim()],
       }
 
       if (stakeholder.emails && stakeholder.emails.length > 0) {
         contactData.email = stakeholder.emails
+      } else if (stakeholder.email) {
+        contactData.email = [stakeholder.email]
+      }
+
+      if (stakeholder.phones && stakeholder.phones.length > 0) {
+        contactData.tel = stakeholder.phones
+      } else if (stakeholder.phone) {
+        contactData.tel = [stakeholder.phone]
       }
 
       if (stakeholder.organization) {
@@ -153,18 +159,20 @@ export const useContacts = () => {
   // Generate vCard for manual save (fallback method)
   const generateVCard = useCallback((stakeholder: {
     firstName: string
-    lastName: string
+    lastName?: string
     emails?: string[]
     phones?: string[]
+    email?: string
+    phone?: string
     organization?: string
   }) => {
     const vCard = [
       'BEGIN:VCARD',
       'VERSION:3.0',
-      `FN:${stakeholder.firstName} ${stakeholder.lastName}`,
-      `N:${stakeholder.lastName};${stakeholder.firstName};;;`,
-      ...(stakeholder.phones || []).map(p => `TEL:${p}`),
-      ...(stakeholder.emails || []).map(e => `EMAIL:${e}`),
+      `FN:${stakeholder.firstName} ${stakeholder.lastName || ''}`.trim(),
+      `N:${stakeholder.lastName || ''};${stakeholder.firstName};;;`,
+      ...(stakeholder.phones || (stakeholder.phone ? [stakeholder.phone] : [])).map(p => `TEL:${p}`),
+      ...(stakeholder.emails || (stakeholder.email ? [stakeholder.email] : [])).map(e => `EMAIL:${e}`),
       stakeholder.organization ? `ORG:${stakeholder.organization}` : '',
       'END:VCARD'
     ].filter(Boolean).join('\n')
@@ -174,7 +182,7 @@ export const useContacts = () => {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${stakeholder.firstName}_${stakeholder.lastName}.vcf`
+    link.download = `${stakeholder.firstName}_${stakeholder.lastName || 'contact'}.vcf`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
