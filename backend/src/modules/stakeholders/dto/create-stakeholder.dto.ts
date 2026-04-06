@@ -16,11 +16,12 @@ export class CreateStakeholderDto {
   @MaxLength(50)
   firstName: string;
 
-  @ApiProperty({ example: 'Doe' })
+  @ApiProperty({ example: 'Doe', required: false })
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(50)
-  lastName: string;
+  lastName?: string;
 
   @ApiProperty({ example: ['john.doe@company.com'], required: false })
   @IsOptional()

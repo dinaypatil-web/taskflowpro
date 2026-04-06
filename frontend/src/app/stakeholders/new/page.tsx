@@ -18,7 +18,7 @@ import { normalizePhoneNumber } from '@/lib/utils'
 
 const stakeholderSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  lastName: z.string().optional(),
   emails: z.array(z.object({ value: z.string().email('Invalid email').or(z.literal('')) })),
   phones: z.array(z.object({ value: z.string() })),
   organization: z.string().optional(),
@@ -182,7 +182,7 @@ export default function NewStakeholderPage() {
             {/* Last Name */}
             <div>
               <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                Last Name *
+                Last Name
               </label>
               <input
                 type="text"

@@ -17,7 +17,7 @@ import { normalizePhoneNumber } from '@/lib/utils'
 
 const stakeholderSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  lastName: z.string().optional(),
   emails: z.array(z.object({ value: z.string().email('Invalid email').or(z.literal('')) })),
   phones: z.array(z.object({ value: z.string() })),
   organization: z.string().optional(),
@@ -68,18 +68,25 @@ export default function EditStakeholderPage({ params }: EditStakeholderPageProps
     ['stakeholder', params.id],
     () => stakeholdersApi.getStakeholder(params.id),
     {
-      onSuccess: (data) => {
-        reset({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          emails: data.emails?.length ? data.emails.map(e => ({ value: e })) : (data.email ? [{ value: data.email }] : [{ value: '' }]),
-          phones: data.phones?.length ? data.phones.map(p => ({ value: p })) : (data.phone ? [{ value: data.phone }] : [{ value: '' }]),
-          organization: data.organization || '',
-        })
-        setTags(data.tags || [])
-      },
+      onError: () => {
+        toast.error('Failed to load stakeholder data')
+      }
     }
   )
+
+  // Synchronize form with fetched data
+  useEffect(() => {
+    if (stakeholder) {
+      reset({
+        firstName: stakeholder.firstName,
+        lastName: stakeholder.lastName || '',
+        emails: stakeholder.emails?.length ? stakeholder.emails.map(e => ({ value: e })) : (stakeholder.email ? [{ value: stakeholder.email }] : [{ value: '' }]),
+        phones: stakeholder.phones?.length ? stakeholder.phones.map(p => ({ value: p })) : (stakeholder.phone ? [{ value: stakeholder.phone }] : [{ value: '' }]),
+        organization: stakeholder.organization || '',
+      })
+      setTags(stakeholder.tags || [])
+    }
+  }, [stakeholder, reset])
 
   const updateMutation = useMutation(
     (data: UpdateStakeholderRequest) => stakeholdersApi.updateStakeholder(params.id, data),
@@ -246,7 +253,7 @@ export default function EditStakeholderPage({ params }: EditStakeholderPageProps
             {/* Last Name */}
             <div>
               <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                Last Name *
+                Last Name
               </label>
               <input
                 type="text"
