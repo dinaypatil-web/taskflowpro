@@ -341,58 +341,54 @@ function CalendarPageContent() {
                         </button>
                       )}
 
-                      {dayEvents.slice(0, 3).map((event: any) => {
-                        const taskPayload = event.task || event
-                        const id = event.taskId || event.id
+                      <div className="max-h-[100px] overflow-y-auto custom-scrollbar space-y-1 pr-0.5">
+                        {dayEvents.map((event: any) => {
+                          const taskPayload = event.task || event
+                          const id = event.taskId || event.id
 
-                        const dateStr = toLocalDateString(day)
+                          const dateStr = toLocalDateString(day)
 
-                        if (!isValidDate(event.startDate)) return null;
-                        const startStr = toLocalDateString(event.startDate)
+                          if (!isValidDate(event.startDate)) return null;
+                          const startStr = toLocalDateString(event.startDate)
 
-                        const endDateVal = event.endDate || event.startDate
-                        if (!isValidDate(endDateVal)) return null;
-                        const endStr = toLocalDateString(endDateVal)
+                          const endDateVal = event.endDate || event.startDate
+                          if (!isValidDate(endDateVal)) return null;
+                          const endStr = toLocalDateString(endDateVal)
 
-                        const dueDateStr = event.dueDate && isValidDate(event.dueDate)
-                          ? toLocalDateString(event.dueDate)
-                          : null
-                        const todayStr = toLocalDateString(new Date())
+                          const dueDateStr = event.dueDate && isValidDate(event.dueDate)
+                            ? toLocalDateString(event.dueDate)
+                            : null
+                          const todayStr = toLocalDateString(new Date())
 
-                        const isCompleted = event.status === 'COMPLETED'
-                        const isDelayed = !isCompleted && dueDateStr && dateStr > dueDateStr
-                        const isStart = dateStr === startStr
-                        const isEnd = dateStr === endStr || (!isCompleted && dateStr === todayStr && dateStr > endStr)
+                          const isCompleted = event.status === 'COMPLETED'
+                          const isDelayed = !isCompleted && dueDateStr && dateStr > dueDateStr
+                          const isStart = dateStr === startStr
+                          const isEnd = dateStr === endStr || (!isCompleted && dateStr === todayStr && dateStr > endStr)
 
-                        // Sync with Gantt chart colors: Completed (Green), Overdue (Red), On-Track (Orange)
-                        const baseStyle = isCompleted
-                          ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-sm'
-                          : (isDelayed
-                              ? 'bg-rose-600 text-white border-rose-700 hover:bg-rose-700 shadow-sm'
-                              : 'bg-orange-500 text-white border-orange-600 hover:bg-orange-600 shadow-sm')
+                          // Sync with Gantt chart colors: Completed (Green), Overdue (Red), On-Track (Orange)
+                          const baseStyle = isCompleted
+                            ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-sm'
+                            : (isDelayed
+                                ? 'bg-rose-600 text-white border-rose-700 hover:bg-rose-700 shadow-sm'
+                                : 'bg-orange-500 text-white border-orange-600 hover:bg-orange-600 shadow-sm')
 
-                        return (
-                          <Link
-                            key={event.id}
-                            href={`/tasks/${id}`}
-                            className={`block p-1 text-[10px] sm:text-xs truncate transition-all border ${baseStyle} ${isStart ? 'rounded-l' : ''
-                              } ${isEnd ? 'rounded-r' : 'border-r-0'} ${!isStart && !isEnd ? 'rounded-none' : ''
-                              }`}
-                          >
-                            <div className="flex items-center">
-                              {isDelayed && dateStr === todayStr && <AlertCircle className="h-2 w-2 mr-1 flex-shrink-0 animate-pulse" />}
-                              <span className="truncate">{isStart ? event.title : '\u00A0'}</span>
-                              {isCompleted && isEnd && <span className="ml-auto text-[8px]">✓</span>}
-                            </div>
-                          </Link>
-                        )
-                      })}
-
-                      {dayEvents.length > 3 && (
-                        <div className="text-[10px] text-gray-500 text-center">
-                          +{dayEvents.length - 3} more
-                        </div>
-                      )}
+                          return (
+                            <Link
+                              key={event.id}
+                              href={`/tasks/${id}`}
+                              className={`block p-1 text-[10px] sm:text-xs truncate transition-all border ${baseStyle} ${isStart ? 'rounded-l' : ''
+                                } ${isEnd ? 'rounded-r' : 'border-r-0'} ${!isStart && !isEnd ? 'rounded-none' : ''
+                                }`}
+                            >
+                              <div className="flex items-center">
+                                {isDelayed && dateStr === todayStr && <AlertCircle className="h-2 w-2 mr-1 flex-shrink-0 animate-pulse" />}
+                                <span className="truncate">{isStart ? event.title : '\u00A0'}</span>
+                                {isCompleted && isEnd && <span className="ml-auto text-[8px]">✓</span>}
+                              </div>
+                            </Link>
+                          )
+                        })}
+                      </div>
                     </div>
                   </div>
                 )
