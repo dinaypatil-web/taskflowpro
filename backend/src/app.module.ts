@@ -12,6 +12,7 @@ import { RemindersModule } from './modules/reminders/reminders.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthModule } from './modules/health/health.module';
+import { WorkflowsModule } from './modules/workflows/workflows.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { HealthModule } from './modules/health/health.module';
     CalendarModule,
     NotificationsModule,
     HealthModule,
+    WorkflowsModule,
   ],
 })
 export class AppModule { }

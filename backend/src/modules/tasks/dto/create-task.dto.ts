@@ -55,4 +55,9 @@ export class CreateTaskDto {
   @IsOptional()
   @IsArray()
   attachments?: any[];
+
+  @ApiProperty({ example: 'user-id-123', required: false })
+  @IsOptional()
+  @IsString()
+  assigneeUserId?: string;
 }

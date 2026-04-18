@@ -11,6 +11,7 @@ import { TaskStats } from '@/components/dashboard/TaskStats'
 import { RecentTasks } from '@/components/dashboard/RecentTasks'
 import { UpcomingTasks } from '@/components/dashboard/UpcomingTasks'
 import { QuickActions } from '@/components/dashboard/QuickActions'
+import { ProfileUpdateAlert } from '@/components/dashboard/ProfileUpdateAlert'
 import { Sparkles, Zap } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -77,6 +78,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Profile Update Prompt */}
+        <ProfileUpdateAlert />
 
         {/* Quick Actions */}
         <div className="animate-fade-in-up animate-stagger-2">

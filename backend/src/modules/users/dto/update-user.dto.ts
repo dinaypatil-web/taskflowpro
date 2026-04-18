@@ -27,4 +27,28 @@ export class UpdateUserDto {
   @MinLength(1)
   @MaxLength(50)
   lastName?: string;
+
+  @ApiProperty({ example: 'Google', required: false })
+  @IsOptional()
+  @IsString()
+  organization?: string;
+
+  @ApiProperty({ example: 'Project X', required: false })
+  @IsOptional()
+  @IsString()
+  projectName?: string;
+
+  @ApiProperty({ example: 'Engineering', required: false })
+  @IsOptional()
+  @IsString()
+  department?: string;
+
+  @ApiProperty({ example: 'user-id-123', required: false })
+  @IsOptional()
+  @IsString()
+  superiorId?: string;
+
+  @ApiProperty({ example: true, required: false })
+  @IsOptional()
+  isProjectHead?: boolean;
 }

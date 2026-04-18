@@ -8,10 +8,11 @@ import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from 'react-query'
 import { tasksApi } from '@/lib/api/tasks'
 import { stakeholdersApi } from '@/lib/api/stakeholders'
+import { usersApi } from '@/lib/api/users'
 import { Attachment, CreateTaskRequest, Priority } from '@/types/task'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { ArrowLeft, Plus, X, Calendar, Flag, Users, FileText, Upload, Paperclip, File, Image as ImageIcon, FileText as FileTextIcon } from 'lucide-react'
+import { ArrowLeft, Plus, X, Calendar, Flag, Users, FileText, Upload, Paperclip, File, Image as ImageIcon, FileText as FileTextIcon, UserCheck } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { getPriorityColor, isValidDate } from '@/lib/utils'
@@ -24,6 +25,7 @@ const taskSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
+  assigneeUserId: z.string().optional(),
 })
 
 type TaskFormData = z.infer<typeof taskSchema>
@@ -71,6 +73,13 @@ function NewTaskPageContent() {
       sortOrder: 'asc'
     }),
     { staleTime: 30000 }
+  )
+
+  // Fetch available users for system assignment
+  const { data: assigneesData } = useQuery(
+    'availableAssignees',
+    () => usersApi.getAvailableAssignees(),
+    { staleTime: 60000 }
   )
 
   const createMutation = useMutation(
@@ -306,6 +315,31 @@ function NewTaskPageContent() {
                   <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
                 </label>
               </div>
+            </div>
+
+            {/* User Assignment */}
+            <div>
+              <label htmlFor="assigneeUserId" className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="flex items-center space-x-2">
+                  <UserCheck className="h-4 w-4" />
+                  <span>Assign to User (Internal)</span>
+                </div>
+              </label>
+              <select
+                id="assigneeUserId"
+                {...register('assigneeUserId')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="">Select Internal User (optional)</option>
+                {assigneesData?.map(assignee => (
+                  <option key={assignee.id} value={assignee.id}>
+                    {assignee.firstName} {assignee.lastName} ({assignee.department || 'No Dept'})
+                  </option>
+                ))}
+              </select>
+              {assigneesData && assigneesData.length === 0 && (
+                <p className="mt-1 text-xs text-gray-500 italic">No eligible internal users found for assignment based on your organization/project settings.</p>
+              )}
             </div>
 
             {/* Stakeholder Assignment */}

@@ -7,6 +7,7 @@ import { VoiceTaskDto } from './dto/voice-task.dto';
 import { StorageService } from '../../shared/storage/storage.service';
 
 import { CalendarService } from '../calendar/calendar.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class TasksService {
@@ -14,6 +15,7 @@ export class TasksService {
     private firestore: FirestoreService,
     private storage: StorageService,
     private calendar: CalendarService,
+    private usersService: UsersService,
   ) { }
 
   private get tasksCollection() {
@@ -25,14 +27,23 @@ export class TasksService {
   }
 
   async create(userId: string, createTaskDto: CreateTaskDto) {
-    const { stakeholderIds, ...taskData } = createTaskDto;
+    const { stakeholderIds, assigneeUserId, ...taskData } = createTaskDto;
     const now = new Date();
+
+    // Validate assignee if provided
+    if (assigneeUserId) {
+      const canAssign = await this.usersService.canAssignTaskTo(userId, assigneeUserId);
+      if (!canAssign) {
+        throw new Error('You do not have permission to assign tasks to this user');
+      }
+    }
 
     const taskRef = this.tasksCollection.doc();
     console.log(`[TasksService] Creating task ${taskRef.id} for user ${userId}`);
     const task = {
       ...taskData,
       userId,
+      assigneeUserId: assigneeUserId || null,
       isVoiceCreated: false,
       voiceMetadata: null,
       isDeleted: false,
@@ -215,7 +226,7 @@ export class TasksService {
   }
 
   async update(userId: string, id: string, updateTaskDto: UpdateTaskDto) {
-    const { stakeholderIds, ...taskData } = updateTaskDto;
+    const { stakeholderIds, assigneeUserId, ...taskData } = updateTaskDto;
 
     const taskRef = this.tasksCollection.doc(id);
     const taskDoc = await taskRef.get();
@@ -224,8 +235,19 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
+    // Validate assignee if changed
+    if (assigneeUserId !== undefined && assigneeUserId !== taskDoc.data().assigneeUserId) {
+      if (assigneeUserId) {
+        const canAssign = await this.usersService.canAssignTaskTo(userId, assigneeUserId);
+        if (!canAssign) {
+          throw new Error('You do not have permission to assign tasks to this user');
+        }
+      }
+    }
+
     const updatePayload: any = {
       ...taskData,
+      assigneeUserId: assigneeUserId === undefined ? taskDoc.data().assigneeUserId : assigneeUserId,
       updatedAt: new Date(),
     };
 

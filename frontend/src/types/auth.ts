@@ -8,6 +8,11 @@ export interface User {
   isPhoneVerified: boolean
   isActive: boolean
   lastLoginAt?: string
+  organization?: string
+  projectName?: string
+  department?: string
+  superiorId?: string
+  isProjectHead?: boolean
   createdAt: string
   updatedAt: string
 }
