@@ -31,4 +31,9 @@ export const usersApi = {
     const response = await apiClient.get('/users/stats')
     return response.data
   },
+
+  updatePassword: async (data: any) => {
+    const response = await apiClient.patch('/users/password', data)
+    return response.data
+  },
 }

@@ -136,7 +136,7 @@ function SettingsPageContent() {
   )
 
   const updatePasswordMutation = useMutation(
-    (data: PasswordFormData) => apiClient.patch('/users/password', data),
+    (data: PasswordFormData) => usersApi.updatePassword(data),
     {
       onSuccess: () => {
         resetPasswordForm()
