@@ -121,7 +121,7 @@ function SettingsPageContent() {
   })
 
   const updateProfileMutation = useMutation(
-    (data: ProfileFormData) => usersApi.updateProfile(data),
+    (data: Partial<ProfileFormData>) => usersApi.updateProfile(data),
     {
       onSuccess: (response) => {
         setUser(response)
@@ -155,7 +155,9 @@ function SettingsPageContent() {
   }
 
   const onProfileSubmit = (data: ProfileFormData) => {
-    updateProfileMutation.mutate(data)
+    // Strip email — it's read-only and not accepted by the update endpoint
+    const { email, ...updateData } = data
+    updateProfileMutation.mutate(updateData)
   }
 
   const onPasswordSubmit = (data: PasswordFormData) => {
