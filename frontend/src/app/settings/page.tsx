@@ -30,7 +30,7 @@ import {
 import toast from 'react-hot-toast'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usersApi } from '@/lib/api/users'
-import { workflowsApi } from '@/lib/api/workflows'
+import { workflowsApi, Workflow, WorkflowRule } from '@/lib/api/workflows'
 import { useQuery } from 'react-query'
 import { Building2, Briefcase, LayoutGrid, Award, GitBranch, ShieldCheck } from 'lucide-react'
 
@@ -676,7 +676,7 @@ function SettingsPageContent() {
 function WorkflowTabContent() {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
-  const [rules, setRules] = useState<any[]>([])
+  const [rules, setRules] = useState<WorkflowRule[]>([])
 
   const { data: subordinates } = useQuery(
     'subordinates',
@@ -689,7 +689,7 @@ function WorkflowTabContent() {
     () => workflowsApi.getMyTeamWorkflow(),
     {
       staleTime: 60000,
-      onSuccess: (data) => {
+      onSuccess: (data: Workflow) => {
         if (data?.rules) {
           setRules(data.rules)
         }
@@ -698,7 +698,7 @@ function WorkflowTabContent() {
   )
 
   const updateWorkflowMutation = useMutation(
-    (newRules: any[]) => workflowsApi.updateWorkflow(newRules),
+    (newRules: WorkflowRule[]) => workflowsApi.updateWorkflow(newRules),
     {
       onSuccess: () => {
         queryClient.invalidateQueries('myWorkflow')
@@ -711,7 +711,7 @@ function WorkflowTabContent() {
   )
 
   const handleRuleChange = (subordinateId: string, allowedAssigneeIds: string[]) => {
-    setRules(prev => {
+    setRules((prev: WorkflowRule[]) => {
       const existingIdx = prev.findIndex(r => r.subordinateId === subordinateId)
       if (existingIdx >= 0) {
         const newRules = [...prev]
@@ -777,7 +777,7 @@ function WorkflowTabContent() {
                           key={otherSub.id}
                           onClick={() => {
                             const newIds = allowedIds.includes(otherSub.id)
-                              ? allowedIds.filter(id => id !== otherSub.id)
+                              ? allowedIds.filter((id: string) => id !== otherSub.id)
                               : [...allowedIds, otherSub.id]
                             handleRuleChange(sub.id, newIds)
                           }}
