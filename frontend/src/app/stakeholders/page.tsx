@@ -216,7 +216,7 @@ function StakeholdersPageContent() {
                                 href={`/stakeholders/${stakeholder.id}`}
                                 className="text-sm font-medium text-gray-900 hover:text-primary-600 transition-colors"
                               >
-                                {stakeholder.firstName} {stakeholder.lastName}
+                                {stakeholder.firstName} {stakeholder.lastName || ''}
                               </Link>
                             </div>
                           </div>
@@ -319,7 +319,7 @@ function StakeholdersPageContent() {
                             href={`/stakeholders/${stakeholder.id}`}
                             className="text-sm font-medium text-gray-900 truncate hover:text-primary-600 transition-colors"
                           >
-                            {stakeholder.firstName} {stakeholder.lastName}
+                            {stakeholder.firstName} {stakeholder.lastName || ''}
                           </Link>
                           <div className="mt-1 space-y-1">
                             {(stakeholder.emails?.[0] || stakeholder.email) && (

@@ -137,12 +137,12 @@ function StakeholderDetailsContent({ id }: { id: string }) {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-8 pb-10 flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left gap-8">
                         <div className="h-32 w-32 rounded-3xl bg-primary-100 flex items-center justify-center text-primary-600 text-5xl font-black shadow-lg shadow-primary-50">
-                            {stakeholder.firstName.charAt(0)}{stakeholder.lastName.charAt(0)}
+                            {stakeholder.firstName?.charAt(0)}{stakeholder.lastName?.charAt(0) || ''}
                         </div>
                         <div className="space-y-4 flex-1">
                             <div className="space-y-1">
                                 <h1 className="text-3xl font-black text-gray-900">
-                                    {stakeholder.firstName} {stakeholder.lastName}
+                                    {stakeholder.firstName} {stakeholder.lastName || ''}
                                 </h1>
                                 {stakeholder.organization && (
                                     <p className="text-primary-600 font-bold flex items-center justify-center sm:justify-start">
