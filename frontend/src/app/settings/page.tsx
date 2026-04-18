@@ -124,7 +124,7 @@ function SettingsPageContent() {
     (data: ProfileFormData) => usersApi.updateProfile(data),
     {
       onSuccess: (response) => {
-        setUser(response.data)
+        setUser(response)
         queryClient.invalidateQueries('user')
         toast.success('Profile updated successfully!')
       },
