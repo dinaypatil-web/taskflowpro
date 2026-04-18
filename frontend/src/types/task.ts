@@ -11,6 +11,7 @@ export interface Attachment {
 export interface Task {
   id: string
   userId: string
+  assigneeUserId?: string
   title: string
   description?: string
   priority: Priority
@@ -81,6 +82,7 @@ export interface CreateTaskRequest {
   startDate?: string
   dueDate?: string
   stakeholderIds?: string[]
+  assigneeUserId?: string
   attachments?: Attachment[]
 }
 
@@ -92,6 +94,7 @@ export interface UpdateTaskRequest {
   startDate?: string
   dueDate?: string
   stakeholderIds?: string[]
+  assigneeUserId?: string
   attachments?: Attachment[]
 }
 
@@ -102,6 +105,7 @@ export interface VoiceTaskRequest {
   startDate?: string
   dueDate?: string
   stakeholderIds?: string[]
+  assigneeUserId?: string
   attachments?: Attachment[]
   voiceMetadata?: VoiceMetadata
 }
