@@ -3,7 +3,7 @@ import { Stakeholder } from '@/types/task'
 
 export interface CreateStakeholderRequest {
   firstName: string
-  lastName: string
+  lastName?: string
   emails?: string[]
   phones?: string[]
   organization?: string

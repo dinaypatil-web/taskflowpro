@@ -51,7 +51,7 @@ export interface Stakeholder {
   id: string
   userId: string
   firstName: string
-  lastName: string
+  lastName?: string
   email?: string
   phone?: string
   emails: string[]
