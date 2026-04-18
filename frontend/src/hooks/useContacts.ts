@@ -13,7 +13,7 @@ export interface DeviceContact {
 
 export interface ParsedContact {
   firstName: string
-  lastName: string
+  lastName?: string
   emails?: string[]
   phones?: string[]
   organization?: string

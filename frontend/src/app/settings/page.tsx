@@ -358,7 +358,7 @@ function SettingsPageContent() {
                           </option>
                           {!isProjectHead && superiorsData?.map(superior => (
                             <option key={superior.id} value={superior.id}>
-                              {superior.firstName} {superior.lastName} ({superior.department || 'No Dept'})
+                              {superior.firstName} {superior.lastName || ''} ({superior.department || 'No Dept'})
                             </option>
                           ))}
                         </select>
@@ -750,7 +750,7 @@ function WorkflowTabContent() {
             return (
               <div key={sub.id} className="glass-card p-4 flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
                 <div className="flex-1">
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">{sub.firstName} {sub.lastName}</div>
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">{sub.firstName} {sub.lastName || ''}</div>
                   <div className="text-xs text-gray-500">{sub.department || 'No Department'}</div>
                 </div>
                 

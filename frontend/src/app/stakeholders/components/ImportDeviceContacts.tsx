@@ -183,7 +183,7 @@ export function ImportDeviceContacts({ onImportSuccess }: ImportDeviceContactsPr
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-900 truncate">
-                                            {contact.firstName} {contact.lastName}
+                                            {contact.firstName} {contact.lastName || ''}
                                         </p>
                                         <p className="text-xs text-gray-500 truncate">
                                             {contact.emails?.[0] || contact.phones?.[0] || 'No contact info'}

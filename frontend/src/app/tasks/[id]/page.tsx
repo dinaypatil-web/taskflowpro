@@ -352,11 +352,11 @@ function TaskDetailsContent({ id }: { id: string }) {
                                         className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-100"
                                     >
                                         <div className="h-10 w-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-sm mr-3">
-                                            {ts.stakeholder.firstName.charAt(0)}{ts.stakeholder.lastName.charAt(0)}
+                                            {ts.stakeholder.firstName?.charAt(0)}{ts.stakeholder.lastName?.charAt(0) || ''}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-bold text-gray-900 truncate">
-                                                {ts.stakeholder.firstName} {ts.stakeholder.lastName}
+                                                {ts.stakeholder.firstName} {ts.stakeholder.lastName || ''}
                                             </p>
                                             <p className="text-xs text-gray-500 truncate">
                                                 {ts.stakeholder.emails?.[0] || ts.stakeholder.email || ts.stakeholder.organization || 'Stakeholder'}

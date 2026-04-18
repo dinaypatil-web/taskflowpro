@@ -333,7 +333,7 @@ function NewTaskPageContent() {
                 <option value="">Select Internal User (optional)</option>
                 {assigneesData?.map(assignee => (
                   <option key={assignee.id} value={assignee.id}>
-                    {assignee.firstName} {assignee.lastName} ({assignee.department || 'No Dept'})
+                    {assignee.firstName} {assignee.lastName || ''} ({assignee.department || 'No Dept'})
                   </option>
                 ))}
               </select>
@@ -372,7 +372,7 @@ function NewTaskPageContent() {
                         key={id}
                         className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary-100 text-primary-800"
                       >
-                        {stakeholder.firstName} {stakeholder.lastName}
+                        {stakeholder.firstName} {stakeholder.lastName || ''}
                         <button
                           type="button"
                           onClick={() => toggleStakeholder(id)}
@@ -407,10 +407,10 @@ function NewTaskPageContent() {
                           : 'bg-gray-200 text-gray-600'
                         }
                       `}>
-                        {stakeholder.firstName.charAt(0)}{stakeholder.lastName.charAt(0)}
+                        {stakeholder.firstName?.charAt(0)}{stakeholder.lastName?.charAt(0) || ''}
                       </div>
                       <div className="flex-1">
-                        <span className="font-medium">{stakeholder.firstName} {stakeholder.lastName}</span>
+                        <span className="font-medium">{stakeholder.firstName} {stakeholder.lastName || ''}</span>
                         {stakeholder.organization && (
                           <span className="text-gray-400 ml-2">· {stakeholder.organization}</span>
                         )}
